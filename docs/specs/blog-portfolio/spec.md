@@ -170,10 +170,19 @@ Limitações que o validador **não** cobre, e que ficam por conta da revisão h
   signifique o mesmo no runner do Actions e na máquina local. Nenhum código próprio.
 - **Validação de front matter como script executado no CI, bloqueando o deploy** — as
   regras 1, 3 e 11 são obrigações ("deve"), e obrigação sem verificação é convenção que
-  decai. Um script checa: campos obrigatórios presentes; `categories` contém exatamente
-  uma das duas categorias fixas; ao menos uma tag; e, quando o post declara `repo`, que
-  o valor é uma URL de repositório GitHub. Descartado: pre-commit hook (não roda no
-  Actions, e é local por máquina); revisão manual (é justamente o que decai).
+  decai. O script checa: campos obrigatórios presentes; `categories` com exatamente uma
+  das duas categorias fixas; ao menos uma tag; e, quando `project: true`, que `repo` é
+  URL de repositório GitHub e que `layout` é `project-post`. Descartado: pre-commit hook
+  (não roda no Actions, e é local por máquina); revisão manual (é justamente o que decai).
+- **Validador escrito em Ruby, em `tools/validate-front-matter.rb`** — Ruby já está no
+  ambiente de build (`ruby/setup-ruby` + `bundler-cache` no workflow), lê YAML com a
+  stdlib (`yaml` + `safe_load`) e não adiciona nenhum passo ao CI. `tools/` é onde o
+  starter já guarda `run.sh` e `test.sh`, então o script fica junto do que já existe.
+  Roda no workflow **antes** do `jekyll b`, para falhar rápido e barato. Descartado:
+  Python — mais familiar num contexto de Ciência de Dados, mas custaria um `setup-python`
+  a mais no workflow para resolver um problema que o runtime já presente resolve; e um
+  plugin Jekyll que abortasse o build (acoplaria a validação ao build, impedindo rodá-la
+  isolada e deixando a mensagem de erro dentro do log do Jekyll).
 - **A regra 3 (link para o repositório) é um campo `repo` no front matter, renderizado
   por um layout filho `project-post`** — campo é verificável pelo script e renderizável
   em posição fixa; link no meio do texto não é nem um nem outro. O spike mostrou que o
@@ -288,8 +297,9 @@ Limitações que o validador **não** cobre, e que ficam por conta da revisão h
 - `README.md` do repositório com o fluxo de publicação: escrever → `bundle exec jekyll
   serve` → commit → push → build do Actions → publicado (regra 6, caso de uso
   "visualizar localmente").
-- Contrato de front matter documentado + script de validação rodando no CI e
-  bloqueando o merge/deploy em caso de violação (regras 1, 3, 11).
+- `tools/validate-front-matter.rb` (Ruby, stdlib) rodando no workflow antes do build e
+  reprovando o deploy em caso de violação das regras 1, 3 e 11 — com as duas categorias
+  fixas como constante única no script, mais um caso de teste por regra violável.
 - Template de post de projeto em `_drafts/` com as cinco seções da regra 13.
 - Home em ordem cronológica decrescente (regra 9) e páginas de categoria e de tag
   (regra 10) funcionando, verificadas com os posts de prototipagem. Confirmar no caminho
@@ -348,24 +358,18 @@ Limitações que o validador **não** cobre, e que ficam por conta da revisão h
 
 ## Open questions
 
-<!-- Move each to "Decisions" (with the answer) once closed during review. -->
+**Nenhuma aberta.** Todas foram fechadas em `## Decisions` ou pelo spike do
+`## Audit — 2026-09-17`:
 
-1. **Em que linguagem escrever o script de validação de front matter?** Recomendação:
-   Ruby — já está no ambiente de build (`ruby/setup-ruby` + `bundler-cache` no workflow),
-   não adiciona passo ao CI e lê YAML com a stdlib. Python é mais familiar num contexto de
-   Ciência de Dados, ao custo de um `setup-python` a mais no workflow. É o único item que
-   bloqueia o plan.
-
-<!--
-Fechadas:
-- "Contrato de data sources não confirmado em código" → fechada pelo spike do
-  `## Audit — 2026-09-17` (itens 2, 8, 15, 16).
-- "Usuário do GitHub e nome do repositório" → Decisions.
-- "Idioma dos posts" → Decisions.
-- "Posts reais do MVP" → Decisions (conteúdo fictício).
-- "Rastreador de issues" → Decisions (`BLOG-<n>`).
-- "Remote do GitHub" → Decisions (`ebenezer-dorneles.github.io`).
--->
+| Questão | Fechada em |
+|---|---|
+| Contrato de data sources não confirmado em código | Audit itens 2, 8, 15, 16 |
+| Usuário do GitHub e nome do repositório | Decisions — `ebenezer-dorneles.github.io` |
+| Idioma dos posts | Decisions — pt-BR no MVP, inglês em fase 2 |
+| Quais posts reais no MVP | Decisions — conteúdo fictício de prototipagem |
+| Rastreador de issues | Decisions — identificador local `BLOG-<n>` |
+| Remote do GitHub | Decisions — junto do nome do repositório |
+| Linguagem do validador de front matter | Decisions — Ruby, `tools/validate-front-matter.rb` |
 
 ---
 
@@ -417,3 +421,7 @@ agora e caros depois, então ficam registrados aqui em vez de virarem escopo.
 primeiro build verde no Actions, permissões de Pages, e o comportamento real do hook de
 `last_modified_at` sobre o histórico do repositório. São verificações do plan, com
 comando e resultado registrados no `task.md`, não itens de spec.
+
+**Gate de saída.** Zero itens abertos: 17 achados, 17 fechados, e a última questão aberta
+da spec (linguagem do validador) fechada em `## Decisions`. A spec deixa de ser rascunho.
+Próximo passo do pipeline: **plan**.
