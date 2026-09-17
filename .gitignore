@@ -1,0 +1,41 @@
+# Baseado no .gitignore do cotes2020/chirpy-starter, com uma divergência
+# deliberada: Gemfile.lock É versionado. Ver docs/specs/blog-portfolio/spec.md
+# (Decisions) e o item 4 do Audit — 2026-09-17.
+
+# Bundler
+.bundle
+vendor
+
+# NÃO adicionar Gemfile.lock aqui.
+# O starter o ignora por convenção de gem, mas isto é um site: sem o lock, cada
+# build do Actions resolve as versões de novo e um release novo do tema muda o
+# site publicado sem nenhum commit do autor.
+
+# Cache e saída do Jekyll
+.jekyll-cache
+.jekyll-metadata
+.sass-cache
+_site
+
+# Assets providos pelo gem do tema / gerados no build
+_sass/vendors
+assets/js/dist
+
+# RubyGems
+*.gem
+
+# Dependências NPM (usadas só por ferramental, não pelo site)
+node_modules
+package-lock.json
+
+# Configurações de IDE — as três do starter são versionadas de propósito
+.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+
+# Arquivos de sistema
+*~
+.DS_Store
+Thumbs.db
