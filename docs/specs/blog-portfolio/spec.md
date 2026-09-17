@@ -1,5 +1,5 @@
 ---
-issues: [#1]
+issues: [BLOG-1]
 status: in-progress
 ---
 
@@ -71,19 +71,54 @@ Numeração estável — o restante do documento referencia estas regras por nú
 ## Data sources (confirmed in code)
 
 > **Aviso de contrato:** o repositório está vazio — não existe código para confirmar
-> nada ainda. A tabela abaixo é o contrato **pretendido**, não verificado. Nenhum
+> nada ainda. As tabelas abaixo são o contrato **pretendido**, não verificado. Nenhum
 > item aqui pode ser tratado como confirmado até o scaffold do Jekyll existir e um
 > build local rodar. Fechar isto é item obrigatório do audit (ver Open questions #1).
 
+Não há banco de dados nem API: o que o build lê é o sistema de arquivos. A primeira
+tabela diz **onde** o dado mora; a segunda, que é o contrato que o validador do CI
+verifica, diz **qual** dado.
+
+### Onde o dado mora
+
 | Data source | Where it's defined | Relevant fields | Notes |
 |---|---|---|---|
-| Posts publicados | `_posts/AAAA-MM-DD-slug.md` | `title`, `date`, `categories`, `tags`, `description`, `image`, `repo`, `last_modified_at`, `mermaid` | Jekyll exige o prefixo de data **no nome do arquivo**; `date` no front matter sobrescreve a hora. `categories`/`tags` são listas YAML — uma string solta funciona mas quebra a consistência das páginas de arquivo. |
-| Rascunhos | `_drafts/slug.md` (sem prefixo de data) | idem, sem `date` | Não entram no build sem `--drafts`. É o mecanismo nativo para a regra 1 (`status: draft`) — ver Decisions. |
-| Configuração do site | `_config.yml` | `title`, `tagline`, `url`, `baseurl`, `lang`, `timezone`, `social`, `github.username`, `theme`/`remote_theme`, `plugins` | Alterações em `_config.yml` **não** são recarregadas por `jekyll serve` — exige restart. `url`/`baseurl` errados quebram todos os links em produção e não em local. |
+| Posts publicados | `_posts/AAAA-MM-DD-slug.md` | ver contrato de front matter | Jekyll exige o prefixo de data **no nome do arquivo**; `date` no front matter sobrescreve a hora. |
+| Rascunhos | `_drafts/slug.md` (sem prefixo de data) | idem, sem `date` | Não entram no build sem `--drafts`. É o mecanismo nativo para a regra 1 — ver Decisions. |
+| Configuração do site | `_config.yml` | `title`, `tagline`, `url`, `baseurl`, `lang`, `timezone`, `social`, `github.username`, `theme`, `plugins` | Alterações em `_config.yml` **não** são recarregadas por `jekyll serve` — exige restart. `url`/`baseurl` errados quebram todos os links em produção e não em local. |
 | Metadados do autor / links | `_data/` + `_config.yml` (`social`) | `name`, `email`, `links[]` | Layout exato depende da versão do Chirpy — a confirmar no scaffold. |
 | Imagens de post | `assets/img/posts/<slug>/` | — | Versionadas no repositório (regra 5). Sem CDN externa. |
 | Comentários (fase 2) | `_config.yml` (`comments.provider`, `comments.giscus.*`) | `repo`, `repo_id`, `category_id` | giscus só funciona com repositório **público** e Discussions habilitado; `repo_id`/`category_id` são gerados pelo giscus.app, não inventáveis. |
 | Build/deploy | `.github/workflows/pages-deploy.yml` | — | Existe porque o build é via Actions, não nativo — ver Decisions. |
+
+### Contrato de front matter
+
+Este é o contrato que o script de validação do CI verifica (regras 1, 3 e 11).
+"Obrigatório" significa: ausente reprova o build.
+
+| Campo | Obrigatório | Tipo | Valores aceitos / formato | Regra |
+|---|---|---|---|---|
+| `title` | sim | string | livre, não vazio | 1 |
+| `date` | sim em `_posts/` | data | `AAAA-MM-DD HH:MM:SS +/-HHMM` | 1, 2 |
+| `categories` | sim | lista com exatamente 1 item | `Ciência de Dados` \| `Desenvolvimento` | 1, 11 |
+| `tags` | sim | lista, ≥ 1 item | livre, minúsculas, sem acento | 1, 11 |
+| `project` | não (default `false`) | booleano | `true` marca post de projeto | 3, 13 |
+| `repo` | sim **se** `project: true` | string | `https://github.com/<owner>/<repo>` | 3 |
+| `description` | não | string | ≤ 160 caracteres (limite prático de SEO) | — |
+| `image` | não | mapa | `path` sob `assets/img/posts/<slug>/`, mais `alt` | 5 |
+| `mermaid` | não | booleano | `true` carrega o Mermaid na página | — |
+| `published` | não (default `true`) | booleano | `false` despublica sem apagar o arquivo | 1 |
+| `last_modified_at` | não (fase 2) | data | mesmo formato de `date` | 8 |
+
+Limitações que o validador **não** cobre, e que ficam por conta da revisão humana:
+
+- Se `repo` aponta para um repositório que existe e é público — o script valida formato,
+  não existência (validar existência exigiria chamada de rede no CI).
+- Se as cinco seções da regra 13 estão presentes — é diretriz editorial, ver Decisions.
+- O campo `project` existe justamente porque "é um post sobre projeto" não é detectável
+  automaticamente. Sem ele a regra 3 não seria verificável por máquina: o autor declara,
+  e o validador cobra o `repo` a partir da declaração. Marcar `project: false` num post
+  que é de projeto continua sendo um erro que só revisão humana pega.
 
 ---
 
@@ -139,9 +174,33 @@ Numeração estável — o restante do documento referencia estas regras por nú
   externa. Consequência aceita: o repositório cresce com binários; a mitigação é
   redimensionar antes de commitar, não Git LFS (LFS tem cota própria e complica o
   checkout do Actions).
-- **Repositório `<usuario>.github.io`, servido na raiz** — evita `baseurl`, a fonte
-  clássica de links quebrados que só aparecem em produção. Descartado: repositório de
-  projeto com `baseurl: /blog`.
+- **Repositório `ebenezer-dorneles.github.io`, servido na raiz** — evita `baseurl`, a
+  fonte clássica de links quebrados que só aparecem em produção. O site fica em
+  `https://ebenezer-dorneles.github.io`. Descartado: repositório de projeto com
+  `baseurl: /blog`.
+- **Conteúdo do MVP é fictício, para prototipagem** — os posts da primeira entrega são
+  *fake*, escritos só para exercitar o tema: sem eles não é possível verificar ordenação
+  cronológica (9), páginas de categoria e tag (10), busca, tempo de leitura (4) nem
+  sitemap. Consequências aceitas e obrigatórias: cada post fictício traz `title` com
+  prefixo `[RASCUNHO]`, o `repo` aponta para um placeholder sintaticamente válido (o
+  validador checa formato, não existência) e **todos são removidos antes de o blog ser
+  divulgado a qualquer leitor**. Publicar portfólio com projeto inventado é o pior
+  resultado possível para o objetivo declarado. Descartado: prototipar com os posts
+  reais (atrasa a entrega técnica esperando redação) e prototipar com o post de exemplo
+  do tema (um post só não exercita listagem, arquivo nem busca).
+- **MVP em pt-BR, inglês como fase 2, com a estrutura preparada desde já** — o objetivo
+  é ter os dois idiomas, mas pagar a i18n agora custa customização de layouts e da
+  geração de páginas de arquivo por idioma (o Chirpy não traz isso de fábrica) e dobra o
+  esforço de redação de todo post, para sempre. O MVP sai em pt-BR com `lang: pt-BR` no
+  `_config.yml` e `lang` declarável por post, e as URLs pensadas para receber um prefixo
+  de idioma depois, sem quebrar links existentes. Descartado por ora: pares traduzidos
+  com `hreflang` e seletor de idioma (fase 2, issue própria); um idioma por post sem
+  tradução (deixaria parte do blog ilegível para metade do público-alvo).
+- **Identificador de spec local (`BLOG-<n>`), sem rastreador de issues** — não há
+  tracker no projeto, mas `plan.md` precisa de um identificador estável por seção
+  (`## Plan — <ISSUE>`). A sequência `BLOG-1`, `BLOG-2`… é atribuída neste próprio spec.
+  Descartado: issues do GitHub (overhead de ferramenta para um autor só); deixar o campo
+  vazio (quebraria o encadeamento com plan.md e task.md).
 - **Idioma, analytics, comentários e domínio próprio ficam fora do MVP** — nenhum deles
   é pré-requisito para o objetivo declarado (publicar e ser encontrado), e cada um
   adiciona configuração que precisa ser mantida. Analytics em particular: métrica sem
@@ -174,8 +233,13 @@ Numeração estável — o restante do documento referencia estas regras por nú
 - `jekyll-seo-tag` + `jekyll-sitemap` ativos; `sitemap.xml` e `robots.txt` acessíveis
   no site publicado (ator Buscador).
 - Realce de sintaxe (Rouge) e Mermaid verificados em um post que use ambos.
-- Dois a três posts reais publicados — o MVP não está entregue com o blog vazio, porque
-  nenhuma das regras de navegação, busca e SEO é verificável sem conteúdo.
+- **Três posts fictícios de prototipagem** — o MVP não está entregue com o blog vazio,
+  porque nenhuma das regras de navegação, busca e SEO é verificável sem conteúdo. São
+  descartáveis por construção: um em cada categoria, o terceiro com código, Mermaid e
+  imagem, para exercitar Rouge, diagramas e `assets/img/posts/`. Ver Decisions para as
+  marcações obrigatórias e a remoção antes da divulgação.
+- Remoção dos posts fictícios registrada como pendência de saída do MVP, não esquecida
+  no repositório.
 
 ### Out of scope / future phases
 
@@ -186,8 +250,9 @@ Numeração estável — o restante do documento referencia estas regras por nú
   rastreamento de terceiros. Decisão adiada até existir tráfego para medir.
 - **Domínio próprio + `CNAME`** — fase 2. Reforça identidade, mas troca a URL do site e
   exige DNS; fazer depois que o conteúdo estiver estável evita links mortos.
-- **Suporte a mais de um idioma / versões em inglês** — impacta `lang`, `hreflang` e a
-  estrutura de URLs; grande o suficiente para ser sua própria issue.
+- **Versões em inglês dos posts (i18n completa)** — decidida como fase 2, com issue
+  própria: exige `hreflang`, seletor de idioma, prefixo de idioma nas URLs e páginas de
+  arquivo por idioma. O MVP só garante que essa porta fica aberta (ver Decisions).
 - **`last_modified_at` / data de "última atualização"** (regra 8, segunda metade) — a
   primeira metade (preservar a data original) é garantida pelo nome do arquivo e já vale
   no MVP. Exibir a data de revisão depende de qual mecanismo o Chirpy instalado oferece;
@@ -202,23 +267,14 @@ Numeração estável — o restante do documento referencia estas regras por nú
 
 ## Open questions
 
+<!-- Move each to "Decisions" (with the answer) once closed during review. -->
+
 1. **O contrato de data sources acima não foi confirmado em código** (o repositório está
    vazio). Caminhos, nomes de campos do Chirpy e formato de `_data/` precisam ser
    verificados contra o scaffold real antes do plan. Bloqueia o fechamento do audit.
-2. **Usuário do GitHub e nome do repositório** — a decisão de servir na raiz assume
-   `<usuario>.github.io`. Confirmar o handle e se esse repositório já existe/está livre.
-3. **Idioma dos posts na v1** — pt-BR, inglês ou ambos? Afeta `lang` no `_config.yml`,
-   os metadados de SEO e o público-alvo declarado (recrutadores). Escolher um agora é
-   barato; mudar depois, não.
-4. **Quais são os dois a três posts reais do MVP?** O MVP depende deles, então precisam
-   ser nomeados antes do plan — quais projetos, e qual o repositório GitHub de cada.
-5. **Em que linguagem escrever o script de validação de front matter?** Ruby já está no
-   ambiente de build (nenhuma dependência nova); Python é mais familiar num contexto de
-   Ciência de Dados, ao custo de um setup extra no workflow.
-6. **Rastreador de issues e identificador real** — o frontmatter usa `#1` como
-   provisório. Se o rastreamento não for por issues do GitHub, ajustar.
-7. **Remote do GitHub** — o repositório local foi inicializado, mas ainda não tem
-   remote configurado. Depende da questão 2.
+2. **Em que linguagem escrever o script de validação de front matter?** Recomendação:
+   Ruby — já está no ambiente de build e não adiciona setup ao workflow. Python é mais
+   familiar num contexto de Ciência de Dados, ao custo de um passo extra no CI.
 
 ---
 
