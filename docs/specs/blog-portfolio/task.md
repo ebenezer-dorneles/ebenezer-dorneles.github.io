@@ -35,34 +35,42 @@ vai se ajustar ao que o scaffold revelar.
   - [x] `tools/check.sh` (validador + testes unitários); `bash -n` limpo; `ruby -wc` limpo nos `.rb`
   - [x] `test` no `exclude:` do `_config.yml` (primeira edição do starter; registrado no Log)
   - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [ ] **Step 3 — Configuração do site** (Red/Green/Refactor em plan → Step 3)
-  - [ ] Red: `test/site_test.rb` lendo `_site/` gerado: `<html lang="pt-BR">`; `<meta name="robots" content="noindex, nofollow">` na home; `sitemap.xml` e `robots.txt` existem; links de GitHub, LinkedIn e e-mail na home (regra 12); página `/about/` existe; `_site/test`, `_site/draft`, `_site/docs` e `_site/compose.yaml` **não** existem
-  - [ ] Green: `_config.yml` com os campos do escopo do MVP (title, tagline, description, url, lang: pt-BR, github.username, social.*), mais `timezone: America/Sao_Paulo`, `noindex: true`, e `test`/`draft`/`compose.yaml` no `exclude:`
-  - [ ] Green: `_includes/metadata-hook.html` emitindo o `<meta robots>` quando `site.noindex` é verdadeiro (única sobrescrita de arquivo do gem — placeholder vazio, aprovado no spec → Feedback)
-  - [ ] Green: `_data/contact.yml`, `_data/share.yml`, `_tabs/about.md` (texto provisório, marcado como tal)
-  - [ ] Green: `tools/check.sh` completo — acrescentar `tools/test.sh` e `test/site_test.rb` ao final (validador → testes unitários → build+htmlproofer → testes de integração do site)
-  - [ ] Refactor: `_config.yml` mantém ordem e comentários do starter; só os valores mudam
+- [x] **Step 3 — Configuração do site** (Red/Green/Refactor em plan → Step 3)
+  - [x] Red: `test/site_test.rb` lendo `_site/` gerado: `<html lang="pt-BR">`; `<meta name="robots" content="noindex, nofollow">` na home; `sitemap.xml` e `robots.txt` existem; links de GitHub, LinkedIn e e-mail na home (regra 12); página `/about/` existe; `_site/test`, `_site/draft`, `_site/docs` e `_site/compose.yaml` **não** existem
+  - [x] Green: `_config.yml` com os campos do escopo do MVP (title, tagline, description, url, lang: pt-BR, github.username, social.*), mais `timezone: America/Sao_Paulo`, `noindex: true`, e `test`/`draft`/`compose.yaml` no `exclude:`
+  - [x] Green: `_includes/metadata-hook.html` emitindo o `<meta robots>` quando `site.noindex` é verdadeiro (única sobrescrita de arquivo do gem — placeholder vazio, aprovado no spec → Feedback)
+  - [x] Green: `_data/contact.yml` (LinkedIn ativado), `_data/share.yml` (sem mudança — já atendia), `_tabs/about.md` (texto provisório, marcado como tal)
+  - [x] Green: `tools/check.sh` completo — acrescentado `tools/test.sh` e `test/site_test.rb` ao final (validador → testes unitários → build+htmlproofer → testes de integração do site)
+  - [x] Refactor: `_config.yml` mantém ordem e comentários do starter; só os valores mudam (mais duas adições nossas sem equivalente no starter: chave `noindex` e dois itens no `exclude:`)
+  - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
+- [ ] **Step 4 — Layout `project-post` e template de projeto** (Red/Green/Refactor em plan → Step 4)
+  - [ ] Red: fixture de post com `project: true` (exclusiva do teste, fora de `_posts/`); `site_test.rb` exige o link de `repo` no HTML do post e a ausência do bloco em post comum
+  - [ ] Green: `_layouts/project-post.html` com `layout: post`, bloco do repositório antes de `{{ content }}`
+  - [ ] Green: `_drafts/template-projeto.md` com as cinco seções da regra 13 e front matter que passa no validador (o validador do Step 2 cobra isso)
+  - [ ] Refactor: reusar strings de `_data/locales` quando houver; senão, texto em pt-BR no layout, registrado como dívida de i18n da fase 2
   - [ ] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [ ] Step 4 — Layout `project-post` e template de projeto
 - [ ] Step 5 — Três posts fictícios
 - [ ] Step 6 — README, remote e primeiro deploy
 
 ## State Handover
 
-- **Done:** Steps 0, 1 e 2. Step 2 (validador de front matter, TDD) fechado:
-  `tools/validate-front-matter.rb` com uma função por regra (`title`, `date`,
-  prefixo de arquivo em `_posts/`, `categories`, `tags`, `project`/`repo`/`layout`,
-  `last_modified_at`, guarda do `[RASCUNHO]` × `noindex`), CLI sob
-  `if $PROGRAM_NAME == __FILE__` com flag `--root` (default `.`), `tools/check.sh`
-  (validador + `test/validate_front_matter_test.rb`), `test` no `exclude:` do
-  `_config.yml`. `minitest` 6.0.6 no Gemfile (`group: :test`); `BUNDLED WITH`
-  continua `2.6.9`. `auditoria-de-impacto` rodada antes do commit: achou dois
-  buracos de tipo (`repo`/`tag` não-string derrubavam o script em vez de reportar
-  erro), corrigidos com guarda de tipo e teste de regressão. Nada foi enviado ao
-  `origin`.
-- **Next:** Step 3 — Configuração do site (ver plan.md → Stages). Decompor a
-  Checklist antes de começar (modo: só a próxima etapa aberta).
-- **Blockers / open decisions:** nenhum para os Steps 3–5. Antes do Step 6, o autor
+- **Done:** Steps 0–3. Step 3 (configuração do site) fechado: `_config.yml`
+  preenchido (`title`, `tagline`, `description`, `url`, `lang: pt-BR`,
+  `timezone: America/Sao_Paulo`, `github.username: ebenezer-dorneles`,
+  `social.{name,email,links}` com GitHub + LinkedIn), `noindex: true` (chave
+  nova, sem equivalente no starter) e `draft`/`compose.yaml` no `exclude:`.
+  `_includes/metadata-hook.html` emite o `<meta robots>` quando `site.noindex`
+  é `true` (única sobrescrita de arquivo do gem, aprovada). `_data/contact.yml`
+  com LinkedIn ativado (`https://www.linkedin.com/in/ebedorneles/`); e-mail de
+  contato `ebenezerdorneles@gmail.com` (confirmado pelo autor via
+  `AskUserQuestion`, não inventado). `_tabs/about.md` com bio provisória
+  marcada como tal. `tools/check.sh` completo: validador → testes unitários →
+  `tools/test.sh` → `test/site_test.rb` (12 casos: lang, meta robots, sitemap,
+  robots.txt, links de contato, `/about/`, ausência de `test`/`draft`/`docs`/
+  `compose.yaml` em `_site/`). Nada foi enviado ao `origin`.
+- **Next:** Step 4 — Layout `project-post` e template de projeto (ver plan.md →
+  Stages e a Checklist já decomposta acima).
+- **Blockers / open decisions:** nenhum para os Steps 4–5. Antes do Step 6, o autor
   precisa confirmar Pages → Source = **GitHub Actions**.
 - **Watch out:**
   - Todo comando Ruby/Jekyll roda **dentro** do container (`docker compose run --rm site …`).
@@ -70,14 +78,20 @@ vai se ajustar ao que o scaffold revelar.
   - O workflow do starter **já** vem com `ruby-version: 3.4`: os três lugares com a
     versão (Dockerfile, `.ruby-version`, workflow) estão alinhados sem edição.
   - O workflow publica a cada push em `main`/`master`. Não fazer push de `main` antes do Step 6.
-  - `compose.yaml` ainda vai para `_site/` até o Step 3. Não publicar antes disso.
   - O bundler 2.6 grava 11 plataformas no lock por padrão (arm, darwin, musl…), não só
     `x86_64-linux`. É o comportamento dele e é inofensivo; não "limpar" à mão.
-  - O validador ainda não roda no workflow (isso é Step 3, quando `check.sh` ganha
-    `test.sh` + `site_test.rb` no fim e o job troca os passos inline pelo `check.sh`).
-  - `_config.yml` ainda não tem `noindex: true` (chega no Step 3). Até lá, um post
-    real com título `[RASCUNHO]` reprovaria o validador — não é o caso, ainda não há
-    posts em `_posts/`/`_drafts/`.
+  - O validador **ainda não roda no workflow do Actions** — `check.sh` já cobre tudo
+    localmente, mas o job do `.github/workflows/pages-deploy.yml` continua com os
+    passos inline `Build site`/`Test site` do starter. Trocar pelo `check.sh` é
+    trabalho do Step 6 (ou de quando o workflow for tocado), não decidido ainda em
+    qual Step exato — registrar ao chegar lá.
+  - `test/site_test.rb` faz `skip` se `_site/` não existir: sempre rodar via
+    `tools/check.sh` (que builda antes) ou `tools/test.sh` manualmente antes do teste,
+    senão a suíde "passa" sem verificar nada.
+  - `twitter.username` no `_config.yml` continua com o placeholder do starter
+    (`twitter_username`) — fora do escopo da regra 12, mas vai aparecer no meta
+    `twitter:site` se o site for publicado assim. Não bloqueia o MVP; registrar se
+    virar item de fase 2.
 
 ## Execution Log
 
@@ -162,6 +176,51 @@ vai se ajustar ao que o scaffold revelar.
 - Gate: `docker compose run --rm site bash tools/check.sh` — 26 testes (22 + 2 de
   regressão da auditoria + 2 de CLI), 0 falhas, 0 erros.
 
+### 2026-09-18 — Step 3: configuração do site
+
+- Red: `test/site_test.rb` criado com 12 casos sobre `_site/` gerado (lang,
+  meta robots, sitemap.xml, robots.txt, link GitHub, link LinkedIn, link
+  e-mail, `/about/`, ausência de `test`/`draft`/`docs`/`compose.yaml`). Rodado
+  contra o `_site/` do estado anterior ao Step 3 (`tools/test.sh` já verde
+  desde o Step 2): 7 falhas, 0 erros — todas por asserção (lang `en` em vez de
+  `pt-BR`, meta robots ausente, GitHub/LinkedIn/e-mail com placeholders do
+  starter, `_site/draft` e `_site/compose.yaml` publicados por não estarem no
+  `exclude:`). Confirma que o teste falha pelo motivo certo antes do Green.
+- **Bloqueio de decisão do autor, não fui capaz de inferir:** a regra 12 exige
+  link de LinkedIn real, e não havia URL registrada em nenhum artefato do
+  projeto (spec, plan, draft). Perguntado ao autor via `AskUserQuestion`: e-mail
+  de contato confirmado como `ebenezerdorneles@gmail.com` (o mesmo desta conta);
+  LinkedIn confirmado como `https://www.linkedin.com/in/ebedorneles/`. Isso não
+  estava no plan como um passo explícito — o plan assumia os três links "prontos"
+  sem registrar que dois dependiam de dado do autor.
+- Green: `_config.yml` preenchido (ver State Handover); `noindex: true` e
+  `exclude: [draft, compose.yaml]` adicionados — **fora do texto literal do
+  plan**, que dizia "só os valores mudam" no Refactor, mas `noindex` e as duas
+  entradas de `exclude` não têm equivalente prévio no starter para "mudar
+  valor": são chaves novas, documentadas com comentário no próprio
+  `_config.yml` explicando a origem. `_includes/metadata-hook.html` criado com
+  o `{% if site.noindex %}`. LinkedIn descomentado e preenchido em
+  `_data/contact.yml` (Twitter permanece removido do `social.links`, decisão
+  do Step, já que a regra 12 não cobra Twitter). `_tabs/about.md` com bio
+  provisória (`{: .prompt-warning }` marcando o texto como não-final).
+  `_data/share.yml` inspecionado: já atendia (botões de compartilhamento não
+  fazem parte da regra 12), nenhuma mudança necessária.
+- Green confirmado: `docker compose run --rm site bash tools/check.sh` —
+  validador (26 runs) → build+htmlproofer (6 arquivos, 12 links internos, 0
+  falhas) → `site_test.rb` (12 runs, 0 falhas, 0 erros).
+- Refactor: `_config.yml` conferido linha a linha contra o starter — só valores
+  mudaram nas chaves preexistentes; a ordem e os comentários originais foram
+  preservados; as duas adições (`noindex`, `exclude` +2) ficam registradas
+  acima. `bash -n tools/check.sh` e `ruby -wc tools/validate-front-matter.rb`
+  limpos (arquivo não tocado nesta etapa, conferido por precaução).
+- `auditoria-de-impacto` rodada sobre o diff antes do commit: sem achados.
+  Raio de alcance é só configuração/dados lidos pelo tema no build; nenhuma
+  escrita externa, nenhum efeito irreversível alcançável (branch não mergeada,
+  sem push). Único ponto fora de escopo, registrado (não corrigido):
+  `twitter.username` continua com o placeholder do starter — ver State
+  Handover → Watch out.
+- Commit `a6ba685`. Step 4 decomposto na Checklist.
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -195,6 +254,15 @@ vai se ajustar ao que o scaffold revelar.
 - [x] Suíte de testes (final) — `docker compose run --rm site bash tools/check.sh` — 26 runs, 29 assertions, 0 failures, 0 errors
 - [x] Análise estática / lint — `docker compose run --rm site ruby -wc tools/validate-front-matter.rb` — `Syntax OK`; `bash -n tools/check.sh` — sem saída (ok)
 - [x] `tools/test.sh` (regressão do Step 1, após editar `_config.yml`) — exit 0; html-proofer: 6 arquivos, 13 links, 0 falhas (igual ao Step 1)
+
+### 2026-09-18 — Step 3
+
+- [x] Red — `docker compose run --rm site bundle exec ruby -Itest test/site_test.rb` (antes do Green) — 12 runs, 19 assertions, 7 failures, 0 errors
+- [x] Green — mesmo comando, após `_config.yml`/`metadata-hook.html`/`contact.yml`/`about.md` — 12 runs, 19 assertions, 0 failures, 0 errors
+- [x] Auditoria de impacto — sem achados; nenhum efeito irreversível alcançável (sem push)
+- [x] Suíte de testes (gate completo) — `docker compose run --rm site bash tools/check.sh` — validador 26 runs/0 falhas; build produção + htmlproofer 6 arquivos/12 links internos/0 falhas; `site_test.rb` 12 runs/0 falhas
+- [x] Análise estática / lint — `bash -n tools/check.sh` — sem saída (ok); `ruby -wc tools/validate-front-matter.rb` — `Syntax OK` (arquivo não tocado nesta etapa, conferido por precaução)
+- [x] Artefato visível — `_site/index.html`, `_site/about/index.html` gerados pelo `tools/test.sh`; conferência de conteúdo feita por leitura do HTML nos testes (lang, meta robots, links), não por inspeção visual nesta etapa — a inspeção com `tools/run.sh` fica para o Step 5, quando houver posts reais a navegar
 
 ## Wrap up
 
