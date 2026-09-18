@@ -16,16 +16,25 @@ vai se ajustar ao que o scaffold revelar.
   - [x] `compose.yaml` na raiz (serviço `site`, bind mount `:z`, volume `bundle`, porta 4000)
   - [x] `tools/docker/Dockerfile` (`ruby:3.4` + usuário `dev` com UID/GID do host + `safe.directory`)
   - [x] `ruby -v` = 3.4.x no container; dono dos arquivos = 1000; `git log` funciona; volume gravável
-- [ ] **Step 1 — Scaffold do starter**
-  - [ ] Clonar o starter (`--depth 1`) no scratchpad; copiar para o repositório **sem** `.git`, `.gitignore`, `.gitmodules`, `assets/lib` e `.devcontainer/`
-  - [ ] Conferir que `.gitignore` continua o nosso (sem `Gemfile.lock`)
-  - [ ] `.ruby-version` com `3.4`
-  - [ ] Red: `docker compose run --rm site bash tools/test.sh` falha antes do `bundle install`
-  - [ ] `docker compose run --rm site bundle install`, depois `bundle lock --add-platform x86_64-linux`; `BUNDLED WITH` = 2.6.x
-  - [ ] Green: `docker compose run --rm site bash tools/test.sh` verde com o site vazio do starter
-  - [ ] Preview sobe: `docker compose run --rm --service-ports site bash tools/run.sh -H 0.0.0.0` responde em `http://localhost:4000`
-  - [ ] Commit do scaffold puro, sem edições nos arquivos do starter
-- [ ] Step 2 — Validador de front matter
+- [x] **Step 1 — Scaffold do starter**
+  - [x] Clonar o starter (`--depth 1`) no scratchpad; copiar para o repositório **sem** `.git`, `.gitignore`, `.gitmodules`, `assets/lib` e `.devcontainer/`
+  - [x] Conferir que `.gitignore` continua o nosso (sem `Gemfile.lock`)
+  - [x] `.ruby-version` com `3.4`
+  - [x] Red: `docker compose run --rm site bash tools/test.sh` falha antes do `bundle install`
+  - [x] `docker compose run --rm site bundle install`, depois `bundle lock --add-platform x86_64-linux`; `BUNDLED WITH` = 2.6.x
+  - [x] Green: `docker compose run --rm site bash tools/test.sh` verde com o site vazio do starter
+  - [x] Preview sobe: `docker compose run --rm --service-ports site bash tools/run.sh -H 0.0.0.0` responde em `http://localhost:4000`
+  - [x] Commit do scaffold puro, sem edições nos arquivos do starter
+- [ ] **Step 2 — Validador de front matter** (TDD; comandos em plan → Tooling)
+  - [ ] `minitest` no Gemfile (`group: :test`); `bundle install` no container; lock atualizado, `BUNDLED WITH` ainda 2.6.x
+  - [ ] Esqueleto: `tools/validate-front-matter.rb` com `FrontMatterValidator.validate(path:, source:, config:)` devolvendo `[]` e `CATEGORIES`; CLI só sob `if $PROGRAM_NAME == __FILE__`
+  - [ ] Red: `test/validate_front_matter_test.rb`, um caso por regra (lista do plan, Step 2), mais o caso válido; rodar e confirmar que **cada** caso falha pelo motivo certo (asserção, não `NameError`/`LoadError`)
+  - [ ] Red: fixtures `test/fixtures/front_matter/{valid,invalid}/` e teste de CLI via `Open3` (exit 0 / exit 1 com mensagem)
+  - [ ] Green: regras implementadas até a suíte passar; CLI sem argumentos varre `_posts/**/*.md` e `_drafts/**/*.md` e reporta todos os erros
+  - [ ] Refactor: uma função por regra, cada uma devolvendo lista; mensagens `caminho: campo: problema` em pt-BR; `YAML.safe_load(..., permitted_classes: [Date, Time])`
+  - [ ] `tools/check.sh` (validador + testes unitários); `bash -n` limpo; `ruby -wc` limpo nos `.rb`
+  - [ ] `test` no `exclude:` do `_config.yml` (primeira edição do starter; registrar no Log)
+  - [ ] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
 - [ ] Step 3 — Configuração do site
 - [ ] Step 4 — Layout `project-post` e template de projeto
 - [ ] Step 5 — Três posts fictícios
@@ -33,24 +42,26 @@ vai se ajustar ao que o scaffold revelar.
 
 ## State Handover
 
-- **Done:** Step 0. Runtime local Ruby 3.4.10 / bundler 2.6.9 via `docker compose`,
-  verificado (ver Verification). Branch `blog-1-mvp` criado a partir de `main@2f9a536`.
-  O `origin` aponta para `https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io.git`
-  (repositório público, vazio). Nada foi enviado.
-- **Next:** Step 1, primeiro item: clonar o `cotes2020/chirpy-starter` no scratchpad e
-  copiar os arquivos com as exclusões da Checklist.
-- **Blockers / open decisions:** nenhum para os Steps 1–5. Antes do Step 6, o autor
-  precisa confirmar Pages → Source = **GitHub Actions** (a API de Pages exige
-  autenticação, então não deu para verificar daqui).
+- **Done:** Steps 0 e 1. Scaffold puro do `chirpy-starter` (upstream `beffc88`, Chirpy
+  v7.6.0) commitado em `d350906` no `blog-1-mvp`: cópia idêntica byte a byte ao clone,
+  mais `.ruby-version` e `Gemfile.lock` (`BUNDLED WITH 2.6.9`, jekyll 4.4.1,
+  jekyll-theme-chirpy 7.6.0, html-proofer 5.2.2). `tools/test.sh` verde, preview ok.
+  Nada foi enviado ao `origin`.
+- **Next:** Step 2, primeiro item: `minitest` no Gemfile (`group: :test`) e
+  `bundle install` no container. Depois, o Red do validador (ver Checklist).
+- **Blockers / open decisions:** nenhum para os Steps 2–5. Antes do Step 6, o autor
+  precisa confirmar Pages → Source = **GitHub Actions**.
 - **Watch out:**
   - Todo comando Ruby/Jekyll roda **dentro** do container (`docker compose run --rm site …`).
-    O Ruby 4.0.6 do host geraria um lock com `BUNDLED WITH` 4.x, que o CI instalaria.
-  - `compose.yaml` fica na raiz e o Jekyll o copia para `_site/` até o Step 3 incluí-lo
-    no `exclude:`. É inofensivo antes do deploy, mas o Step 3 tem teste para isso.
-  - O Step 1 copia o `_config.yml` do starter **sem editar** (scaffold puro). `lang`,
-    `timezone` e `noindex` só entram no Step 3. Não publicar antes disso.
-  - Três lugares com a versão 3.4: `tools/docker/Dockerfile`, `.ruby-version` (Step 1) e
-    o workflow (Step 1).
+    O Ruby 4.0.6 do host geraria um lock com `BUNDLED WITH` 4.x.
+  - O workflow do starter **já** vem com `ruby-version: 3.4`: os três lugares com a
+    versão (Dockerfile, `.ruby-version`, workflow) estão alinhados sem edição.
+  - O workflow publica a cada push em `main`/`master`. Não fazer push de `main` antes do Step 6.
+  - `compose.yaml` ainda vai para `_site/` até o Step 3. Não publicar antes disso.
+  - O Step 2 é o primeiro a editar um arquivo do starter (`_config.yml`, `exclude:`).
+    Registrar no Log, porque o diff dos Steps seguintes deve mostrar só o que é nosso.
+  - O bundler 2.6 grava 11 plataformas no lock por padrão (arm, darwin, musl…), não só
+    `x86_64-linux`. É o comportamento dele e é inofensivo; não "limpar" à mão.
 
 ## Execution Log
 
@@ -70,6 +81,26 @@ vai se ajustar ao que o scaffold revelar.
   pelo build do site, que ainda não existe). A skill `auditoria-de-impacto` **não** foi
   invocada nesta etapa. Fica para os Steps com código do site.
 
+### 2026-09-18 — Step 1: scaffold do starter
+
+- `cotes2020/chirpy-starter` clonado com `--depth 1` no scratchpad (HEAD `beffc88`,
+  "Update critical file(s) according to Chirpy v7.6.0"). Copiado com
+  `tar --exclude` (`.git`, `.gitignore`, `.gitmodules`, `assets/lib`, `.devcontainer`).
+  O diretório `assets/` vazio que sobrou do gitlink foi removido.
+- `diff -rq` clone × repositório: única diferença é o `assets/` excluído. O scaffold é puro.
+- **Constatação:** o workflow do starter já usa `ruby-version: 3.4`. O Handover anterior
+  previa editar o workflow no Step 1; não foi preciso, e o commit ficou sem nenhuma edição.
+- O `bundle lock --add-platform x86_64-linux` não mudou nada: o bundler 2.6.9 já grava
+  `x86_64-linux` entre as 11 plataformas padrão. O comando fica no procedimento, porque
+  é idempotente.
+- `auditoria-de-impacto` rodada antes do commit. 24 arquivos novos, nenhum versionado
+  alterado (o `.gitattributes` com `* text=auto` não renormalizou nada) e nenhuma
+  invariante nova. Efeito irreversível alcançável: só o `pages-deploy.yml` num push em
+  `main`, que não acontece antes do Step 6. Fora do escopo, só registrado: o
+  `_plugins/posts-lastmod-hook.rb` do starter interpola `post.path` no shell sem
+  escapar. O risco é baixo (caminhos do próprio repositório) e o arquivo fica intocado.
+- Commit `d350906`. Step 2 decomposto na Checklist.
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -83,6 +114,17 @@ vai se ajustar ao que o scaffold revelar.
 - [x] Volume de gems gravável — `test -w /usr/local/bundle` — ok
 - [ ] Suíte de testes — n/a nesta etapa (não há código testável; a suíte nasce no Step 2)
 - [ ] Análise estática / lint — n/a (Dockerfile e compose; não há hadolint no ambiente, e o plano não o adota)
+
+### 2026-09-18 — Step 1
+
+- [x] Red — `docker compose run --rm site bash tools/test.sh` antes do `bundle install` — exit 127, `bundler: command not found: jekyll`
+- [x] Dependências — `docker compose run --rm site bundle install` — 62 gems, 5 dependências do Gemfile; `bundle lock --add-platform x86_64-linux` — lock gravado
+- [x] Lock — `grep BUNDLED -A1 Gemfile.lock` — `2.6.9`; `x86_64-linux` em PLATFORMS; dono `1000:1000`
+- [x] Green — `docker compose run --rm site bash tools/test.sh` — exit 0; build em 1.5 s; html-proofer: 6 arquivos, 13 links internos, 0 falhas; 0 linhas com `warn`/`error`/`deprecat` no log
+- [x] Preview — `docker compose run -d --rm --service-ports site bash tools/run.sh -H 0.0.0.0` + `curl http://localhost:4000/` — HTTP 200, `<title>Chirpy</title>`; container parado depois
+- [x] Scaffold puro — `diff -rq` clone × repositório — só `assets/` (excluído de propósito)
+- [ ] Suíte de testes — n/a (a suíte nasce no Step 2)
+- [ ] Análise estática / lint — n/a (nenhum código nosso; arquivos do starter não são alterados)
 
 ## Wrap up
 
