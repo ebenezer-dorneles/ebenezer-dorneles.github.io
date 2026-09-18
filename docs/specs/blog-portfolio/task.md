@@ -25,31 +25,44 @@ vai se ajustar ao que o scaffold revelar.
   - [x] Green: `docker compose run --rm site bash tools/test.sh` verde com o site vazio do starter
   - [x] Preview sobe: `docker compose run --rm --service-ports site bash tools/run.sh -H 0.0.0.0` responde em `http://localhost:4000`
   - [x] Commit do scaffold puro, sem edições nos arquivos do starter
-- [ ] **Step 2 — Validador de front matter** (TDD; comandos em plan → Tooling)
-  - [ ] `minitest` no Gemfile (`group: :test`); `bundle install` no container; lock atualizado, `BUNDLED WITH` ainda 2.6.x
-  - [ ] Esqueleto: `tools/validate-front-matter.rb` com `FrontMatterValidator.validate(path:, source:, config:)` devolvendo `[]` e `CATEGORIES`; CLI só sob `if $PROGRAM_NAME == __FILE__`
-  - [ ] Red: `test/validate_front_matter_test.rb`, um caso por regra (lista do plan, Step 2), mais o caso válido; rodar e confirmar que **cada** caso falha pelo motivo certo (asserção, não `NameError`/`LoadError`)
-  - [ ] Red: fixtures `test/fixtures/front_matter/{valid,invalid}/` e teste de CLI via `Open3` (exit 0 / exit 1 com mensagem)
-  - [ ] Green: regras implementadas até a suíte passar; CLI sem argumentos varre `_posts/**/*.md` e `_drafts/**/*.md` e reporta todos os erros
-  - [ ] Refactor: uma função por regra, cada uma devolvendo lista; mensagens `caminho: campo: problema` em pt-BR; `YAML.safe_load(..., permitted_classes: [Date, Time])`
-  - [ ] `tools/check.sh` (validador + testes unitários); `bash -n` limpo; `ruby -wc` limpo nos `.rb`
-  - [ ] `test` no `exclude:` do `_config.yml` (primeira edição do starter; registrar no Log)
+- [x] **Step 2 — Validador de front matter** (TDD; comandos em plan → Tooling)
+  - [x] `minitest` no Gemfile (`group: :test`); `bundle install` no container; lock atualizado, `BUNDLED WITH` ainda 2.6.x
+  - [x] Esqueleto: `tools/validate-front-matter.rb` com `FrontMatterValidator.validate(path:, source:, config:)` devolvendo `[]` e `CATEGORIES`; CLI só sob `if $PROGRAM_NAME == __FILE__`
+  - [x] Red: `test/validate_front_matter_test.rb`, um caso por regra (lista do plan, Step 2), mais o caso válido; rodar e confirmar que **cada** caso falha pelo motivo certo (asserção, não `NameError`/`LoadError`)
+  - [x] Red: fixtures `test/fixtures/front_matter/{valid,invalid}/` e teste de CLI via `Open3` (exit 0 / exit 1 com mensagem)
+  - [x] Green: regras implementadas até a suíte passar; CLI sem argumentos varre `_posts/**/*.md` e `_drafts/**/*.md` e reporta todos os erros
+  - [x] Refactor: uma função por regra, cada uma devolvendo lista; mensagens `caminho: campo: problema` em pt-BR; `YAML.safe_load(..., permitted_classes: [Date, Time])`
+  - [x] `tools/check.sh` (validador + testes unitários); `bash -n` limpo; `ruby -wc` limpo nos `.rb`
+  - [x] `test` no `exclude:` do `_config.yml` (primeira edição do starter; registrado no Log)
+  - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
+- [ ] **Step 3 — Configuração do site** (Red/Green/Refactor em plan → Step 3)
+  - [ ] Red: `test/site_test.rb` lendo `_site/` gerado: `<html lang="pt-BR">`; `<meta name="robots" content="noindex, nofollow">` na home; `sitemap.xml` e `robots.txt` existem; links de GitHub, LinkedIn e e-mail na home (regra 12); página `/about/` existe; `_site/test`, `_site/draft`, `_site/docs` e `_site/compose.yaml` **não** existem
+  - [ ] Green: `_config.yml` com os campos do escopo do MVP (title, tagline, description, url, lang: pt-BR, github.username, social.*), mais `timezone: America/Sao_Paulo`, `noindex: true`, e `test`/`draft`/`compose.yaml` no `exclude:`
+  - [ ] Green: `_includes/metadata-hook.html` emitindo o `<meta robots>` quando `site.noindex` é verdadeiro (única sobrescrita de arquivo do gem — placeholder vazio, aprovado no spec → Feedback)
+  - [ ] Green: `_data/contact.yml`, `_data/share.yml`, `_tabs/about.md` (texto provisório, marcado como tal)
+  - [ ] Green: `tools/check.sh` completo — acrescentar `tools/test.sh` e `test/site_test.rb` ao final (validador → testes unitários → build+htmlproofer → testes de integração do site)
+  - [ ] Refactor: `_config.yml` mantém ordem e comentários do starter; só os valores mudam
   - [ ] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [ ] Step 3 — Configuração do site
 - [ ] Step 4 — Layout `project-post` e template de projeto
 - [ ] Step 5 — Três posts fictícios
 - [ ] Step 6 — README, remote e primeiro deploy
 
 ## State Handover
 
-- **Done:** Steps 0 e 1. Scaffold puro do `chirpy-starter` (upstream `beffc88`, Chirpy
-  v7.6.0) commitado em `d350906` no `blog-1-mvp`: cópia idêntica byte a byte ao clone,
-  mais `.ruby-version` e `Gemfile.lock` (`BUNDLED WITH 2.6.9`, jekyll 4.4.1,
-  jekyll-theme-chirpy 7.6.0, html-proofer 5.2.2). `tools/test.sh` verde, preview ok.
-  Nada foi enviado ao `origin`.
-- **Next:** Step 2, primeiro item: `minitest` no Gemfile (`group: :test`) e
-  `bundle install` no container. Depois, o Red do validador (ver Checklist).
-- **Blockers / open decisions:** nenhum para os Steps 2–5. Antes do Step 6, o autor
+- **Done:** Steps 0, 1 e 2. Step 2 (validador de front matter, TDD) fechado:
+  `tools/validate-front-matter.rb` com uma função por regra (`title`, `date`,
+  prefixo de arquivo em `_posts/`, `categories`, `tags`, `project`/`repo`/`layout`,
+  `last_modified_at`, guarda do `[RASCUNHO]` × `noindex`), CLI sob
+  `if $PROGRAM_NAME == __FILE__` com flag `--root` (default `.`), `tools/check.sh`
+  (validador + `test/validate_front_matter_test.rb`), `test` no `exclude:` do
+  `_config.yml`. `minitest` 6.0.6 no Gemfile (`group: :test`); `BUNDLED WITH`
+  continua `2.6.9`. `auditoria-de-impacto` rodada antes do commit: achou dois
+  buracos de tipo (`repo`/`tag` não-string derrubavam o script em vez de reportar
+  erro), corrigidos com guarda de tipo e teste de regressão. Nada foi enviado ao
+  `origin`.
+- **Next:** Step 3 — Configuração do site (ver plan.md → Stages). Decompor a
+  Checklist antes de começar (modo: só a próxima etapa aberta).
+- **Blockers / open decisions:** nenhum para os Steps 3–5. Antes do Step 6, o autor
   precisa confirmar Pages → Source = **GitHub Actions**.
 - **Watch out:**
   - Todo comando Ruby/Jekyll roda **dentro** do container (`docker compose run --rm site …`).
@@ -58,10 +71,13 @@ vai se ajustar ao que o scaffold revelar.
     versão (Dockerfile, `.ruby-version`, workflow) estão alinhados sem edição.
   - O workflow publica a cada push em `main`/`master`. Não fazer push de `main` antes do Step 6.
   - `compose.yaml` ainda vai para `_site/` até o Step 3. Não publicar antes disso.
-  - O Step 2 é o primeiro a editar um arquivo do starter (`_config.yml`, `exclude:`).
-    Registrar no Log, porque o diff dos Steps seguintes deve mostrar só o que é nosso.
   - O bundler 2.6 grava 11 plataformas no lock por padrão (arm, darwin, musl…), não só
     `x86_64-linux`. É o comportamento dele e é inofensivo; não "limpar" à mão.
+  - O validador ainda não roda no workflow (isso é Step 3, quando `check.sh` ganha
+    `test.sh` + `site_test.rb` no fim e o job troca os passos inline pelo `check.sh`).
+  - `_config.yml` ainda não tem `noindex: true` (chega no Step 3). Até lá, um post
+    real com título `[RASCUNHO]` reprovaria o validador — não é o caso, ainda não há
+    posts em `_posts/`/`_drafts/`.
 
 ## Execution Log
 
@@ -101,6 +117,51 @@ vai se ajustar ao que o scaffold revelar.
   escapar. O risco é baixo (caminhos do próprio repositório) e o arquivo fica intocado.
 - Commit `d350906`. Step 2 decomposto na Checklist.
 
+### 2026-09-18 — Step 2: validador de front matter (TDD)
+
+- `minitest` (6.0.6) adicionado ao Gemfile em `group: :test`; `bundle install` no
+  container; `BUNDLED WITH` continua `2.6.9`.
+- Esqueleto de `tools/validate-front-matter.rb` com `CATEGORIES` já preenchida
+  (`Ciência de Dados`, `Desenvolvimento` — regra 11, confirmada no spec) em vez de
+  vazia: o plano previa `[]` no esqueleto, mas o valor real já estava decidido e
+  registrado no spec, então preencher de uma vez evitou um passo extra sem
+  ambiguidade.
+- Red: `test/validate_front_matter_test.rb` com 22 casos (um por regra do plan +
+  válido + guarda do `[RASCUNHO]`) mais 2 testes de CLI via `Open3`. Rodado antes
+  da implementação: 20 falhas, 0 erros — todas por asserção (`assert`/`refute`),
+  confirmando que o esqueleto (`validate` sempre devolvendo `[]`) é a causa, não
+  um erro de carregamento.
+- Fixtures em `test/fixtures/front_matter/{valid,invalid}/`, cada uma com
+  subdiretórios `_posts/`/`_drafts/` reais, porque o CLI varre por essas pastas.
+  A CLI ganhou uma flag `--root <dir>` (não prevista no plan) para o teste de
+  integração apontar pra fixture sem tocar `_posts/`/`_drafts/` do repositório —
+  sem isso, o teste de CLI só poderia rodar depois de existirem posts reais
+  (Step 5), quebrando a ordem do plano.
+- Green: uma função privada por regra (`check_title`, `check_date`,
+  `check_filename`, `check_categories`, `check_tags`, `check_project`,
+  `check_last_modified_at`, `check_draft_guard`), todas devolvendo lista de erros
+  no formato `caminho: campo: problema`; front matter extraído por regex de
+  cercas `---`, YAML lido com `YAML.safe_load(..., permitted_classes: [Date, Time])`.
+  Mensagens de erro impressas em `stdout` (não `stderr`), porque o teste de CLI
+  cobra mensagem visível na saída padrão e é isso que o CI vai logar.
+- `auditoria-de-impacto` rodada sobre o diff antes do commit. Achado: `repo` ou
+  item de `tags` não-string (ex. `repo: 12345`, `tags: [42]`) faziam
+  `Regexp#match?`/`String#downcase` levantar exceção em vez de reportar erro de
+  validação — o script ainda falharia (exit não-zero por exceção não tratada),
+  mas com stack trace em vez de mensagem útil. Corrigido com guarda de tipo em
+  `check_project` e `check_tags`, com teste de regressão para os dois casos.
+  Nenhum efeito irreversível alcançável pelo diff (script só lê arquivos e
+  imprime). Veredito: pronto para commit.
+- `test` adicionado ao `exclude:` do `_config.yml` — primeira edição de um arquivo
+  do starter. `tools/test.sh` continua verde (6 arquivos, 13 links, 0 falhas):
+  `test/` nunca apareceu no `_site` antes (não existia), e passa a ficar de fora
+  quando existir código real.
+- `tools/check.sh` criado (só validador + testes unitários, como o plan pede para
+  este Step; `test.sh` e `site_test.rb` entram no fim no Step 3). `bash -n` e
+  `ruby -wc` limpos.
+- Gate: `docker compose run --rm site bash tools/check.sh` — 26 testes (22 + 2 de
+  regressão da auditoria + 2 de CLI), 0 falhas, 0 erros.
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -125,6 +186,15 @@ vai se ajustar ao que o scaffold revelar.
 - [x] Scaffold puro — `diff -rq` clone × repositório — só `assets/` (excluído de propósito)
 - [ ] Suíte de testes — n/a (a suíte nasce no Step 2)
 - [ ] Análise estática / lint — n/a (nenhum código nosso; arquivos do starter não são alterados)
+
+### 2026-09-18 — Step 2
+
+- [x] Red — `docker compose run --rm site bundle exec ruby -Itest test/validate_front_matter_test.rb` (esqueleto) — 24 runs, 20 failures, 0 errors
+- [x] Green — mesmo comando, após implementar as regras — 24 runs, 0 failures, 0 errors
+- [x] Auditoria de impacto — achou 2 buracos de tipo (`repo`/`tag` não-string); corrigidos com guarda de tipo + 2 testes de regressão
+- [x] Suíte de testes (final) — `docker compose run --rm site bash tools/check.sh` — 26 runs, 29 assertions, 0 failures, 0 errors
+- [x] Análise estática / lint — `docker compose run --rm site ruby -wc tools/validate-front-matter.rb` — `Syntax OK`; `bash -n tools/check.sh` — sem saída (ok)
+- [x] `tools/test.sh` (regressão do Step 1, após editar `_config.yml`) — exit 0; html-proofer: 6 arquivos, 13 links, 0 falhas (igual ao Step 1)
 
 ## Wrap up
 
