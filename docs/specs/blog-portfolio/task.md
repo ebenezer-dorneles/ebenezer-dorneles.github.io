@@ -49,35 +49,50 @@ vai se ajustar ao que o scaffold revelar.
   - [x] Green: `_drafts/template-projeto.md` com as cinco seções da regra 13 e front matter que passa no validador (o validador do Step 2 cobra isso)
   - [x] Refactor: reusar strings de `_data/locales` quando houver; senão, texto em pt-BR no layout, registrado como dívida de i18n da fase 2
   - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [ ] **Step 5 — Três posts fictícios** (Red/Green/Refactor em plan → Step 5)
-  - [ ] Red: `site_test.rb` exige, contra os posts reais que serão adicionados: home em ordem decrescente de data (regra 9); página de cada categoria e de cada tag usadas; categoria com **um** item renderiza sem árvore quebrada (Audit item 17); tempo de leitura visível no post (regra 4); entrada de cada post no índice de busca do tema; bloco `.highlight` (Rouge) e Mermaid no post técnico; imagem servida de `assets/img/posts/<slug>/`
-  - [ ] Green: três posts em `_posts/` — um por categoria (Ciência de Dados, Desenvolvimento), o terceiro com bloco de código, diagrama Mermaid e imagem própria; todos com `title` prefixado `[RASCUNHO]` e `repo` placeholder sintaticamente válido (ver spec → Decisions, "Conteúdo do MVP é fictício"); imagem redimensionada antes de commitar
-  - [ ] Green: pelo menos um dos três usa `project: true` + `layout: project-post` (exercita o Step 4 com conteúdo real, não só fixture)
-  - [ ] Atenção: com posts reais em `_posts/`, as fixtures de `test/fixtures/site_posts/` (Step 4) continuam ok enquanto `noindex: true` — ver Watch out
-  - [ ] Refactor: conferência visual com `bash tools/run.sh` (home, post, categoria, tag, busca digitada, "sobre")
-  - [ ] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [ ] Step 6 — README, remote e primeiro deploy
+- [x] **Step 5 — Três posts fictícios** (Red/Green/Refactor em plan → Step 5)
+  - [x] Red: `site_test.rb` exige, contra os posts reais que serão adicionados: home em ordem decrescente de data (regra 9); página de cada categoria e de cada tag usadas; categoria com **um** item renderiza sem árvore quebrada (Audit item 17); tempo de leitura visível no post (regra 4); entrada de cada post no índice de busca do tema; bloco `.highlight` (Rouge) e Mermaid no post técnico; imagem servida de `assets/img/posts/<slug>/`
+  - [x] Green: três posts em `_posts/` — um por categoria (Ciência de Dados, Desenvolvimento), o terceiro com bloco de código, diagrama Mermaid e imagem própria; todos com `title` prefixado `[RASCUNHO]` e `repo` placeholder sintaticamente válido (ver spec → Decisions, "Conteúdo do MVP é fictício"); imagem redimensionada antes de commitar
+  - [x] Green: pelo menos um dos três usa `project: true` + `layout: project-post` (exercita o Step 4 com conteúdo real, não só fixture)
+  - [x] Atenção: com posts reais em `_posts/`, as fixtures de `test/fixtures/site_posts/` (Step 4) continuam ok enquanto `noindex: true` — ver Watch out
+  - [x] Refactor: conferência visual com `bash tools/run.sh` (home, post, categoria, tag, busca digitada, "sobre")
+  - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
+- [ ] **Step 6 — README, remote e primeiro deploy** (bloqueante, decisão do autor; Red/Green em plan → Step 6)
+  - [ ] Red: confirmar que `https://ebenezer-dorneles.github.io` ainda responde 404 (nada publicado)
+  - [ ] Bloqueio a resolver com o autor antes de qualquer push: Pages → Source = **GitHub Actions** nas settings do repositório
+  - [ ] Green: `README.md` com o fluxo da regra 6 (escrever → `jekyll serve` → commit → push → build do Actions → publicado)
+  - [ ] Green: push de `blog-1-mvp` → merge em `main` (é o deploy); acompanhar o run do Actions até ficar verde
+  - [ ] Verificação no site publicado (registrar comando e resultado no `task.md`): `robots.txt`/`sitemap.xml` respondem 200; home tem `<meta robots noindex>`; um post editado num segundo commit mostra `last_modified_at` (regra 8, prova o `fetch-depth: 0`); commit só de `README.md` **não** dispara o workflow (`paths-ignore`)
+  - [ ] Refactor: nenhum previsto pelo plan
+  - [ ] Decisão pendente, não bloqueante para o Step 6 em si: se/quando trocar os passos inline `Build site`/`Test site` do workflow por `bash tools/check.sh` — ver Watch out
 
 ## State Handover
 
-- **Done:** Steps 0–4. Step 4 (layout `project-post` e template de projeto)
-  fechado: `_layouts/project-post.html` herda `layout: post` e injeta um bloco
-  com o link de `page.repo` antes de `{{ content }}` — nenhum arquivo do tema
-  sobrescrito. `_drafts/template-projeto.md` com as cinco seções da regra 13
-  (contexto, stack técnica, processo, resultado, aprendizados) e front matter
-  que passa no validador. `test/fixtures/site_posts/` (novo diretório) tem
-  duas fixtures exclusivas de teste — uma com `project: true`, outra comum —
-  usadas só durante o gate: `tools/check.sh` agora symlinka essas fixtures em
-  `_posts/` antes de buildar e as remove com um `trap` no `EXIT`, mesmo se um
-  passo anterior falhar. `test/site_test.rb` ganhou 2 casos: link do
-  repositório presente no post de projeto, ausente no post comum. Texto do
-  bloco do repositório é pt-BR fixo no layout (sem chave equivalente em
-  `_data/locales`), registrado como dívida de i18n da fase 2. Nada foi
+- **Done:** Steps 0–5. Step 5 (três posts fictícios) fechado: `_posts/` tem
+  três posts reais — `2026-01-05-analise-exploratoria-vendas.md` (Ciência de
+  Dados), `2026-01-10-api-tarefas-ruby.md` (Desenvolvimento, `project: true` +
+  `layout: project-post`, exercitando a Etapa 4 com conteúdo real) e
+  `2026-01-15-visualizando-pipelines.md` (Ciência de Dados, bloco de código
+  Python, diagrama Mermaid e imagem própria em
+  `assets/img/posts/visualizando-pipelines/diagrama.png`). Todos com `title`
+  prefixado `[RASCUNHO]` e `repo` placeholder sintaticamente válido.
+  `site_test.rb` ganhou 7 casos (ordem cronológica da home, páginas de
+  categoria/tag, categoria de um nível sem árvore quebrada, tempo de leitura,
+  índice de busca, highlight+Mermaid+imagem no post técnico). Confirmado por
+  inspeção do gem (`Jekyll::Utils.slugify`) e por build real, não por
+  suposição: categoria "Ciência de Dados" gera `_site/categories/ciência-de-
+  dados/` (acentuado, sem percent-encoding no nome do diretório); campo
+  `image.path` no front matter deve ser só o nome do arquivo (não o caminho
+  completo), porque `media_subpath` já prefixa o diretório — colocar o
+  caminho completo nos dois duplica o path e quebra o htmlproofer (achado
+  desta etapa, corrigido antes do commit). Conferência visual feita com
+  `tools/run.sh`: home, post de projeto, categoria acentuada, tag, sobre e
+  índice de busca todos responderam 200 com o conteúdo esperado. Nada foi
   enviado ao `origin`.
-- **Next:** Step 5 — Três posts fictícios (ver plan.md → Stages e a Checklist
-  já decomposta acima).
-- **Blockers / open decisions:** nenhum para o Step 5. Antes do Step 6, o autor
-  precisa confirmar Pages → Source = **GitHub Actions**.
+- **Next:** Step 6 — README, remote e primeiro deploy (ver plan.md → Stages e
+  a Checklist já decomposta acima). **Bloqueante:** precisa da confirmação do
+  autor sobre Pages → Source antes de qualquer push.
+- **Blockers / open decisions:** Step 6 não pode avançar até o autor confirmar
+  Pages → Source = **GitHub Actions** nas settings do repositório.
 - **Watch out:**
   - Todo comando Ruby/Jekyll roda **dentro** do container (`docker compose run --rm site …`).
     O Ruby 4.0.6 do host geraria um lock com `BUNDLED WITH` 4.x.
@@ -278,6 +293,59 @@ vai se ajustar ao que o scaffold revelar.
   só o `.placeholder` pré-existente, sem symlink residual.
 - Commit `c971568`. Step 5 decomposto na Checklist.
 
+### 2026-09-18 — Step 5: três posts fictícios
+
+- **Spike antes do Red:** para não escrever asserções sobre caminhos
+  adivinhados, os três posts e a imagem foram criados primeiro, e
+  `tools/test.sh` (só build, sem o gate completo) rodou isolado para
+  inspecionar `_site/` gerado antes de fixar os testes. Confirmado por
+  build real: `Jekyll::Utils.slugify("Ciência de Dados")` →
+  `"ciência-de-dados"` (acentuado, minúsculo, espaço trocado por hífen — o
+  gem preserva caracteres acentuados como alfanuméricos); o diretório em
+  disco usa esse valor sem percent-encoding (`_site/categories/ciência-de-
+  dados/`), só a URL no `href` é que sai percent-encoded. Índice de busca
+  em `assets/js/data/search.json`, um JSON por post com `title`/`url`/
+  `categories`/`tags`/`content`.
+- **Achado corrigido antes do commit, fora do plan:** `image.path` no front
+  matter do post com Mermaid apontava para o caminho completo
+  (`/assets/img/posts/visualizando-pipelines/diagrama.png`), igual ao
+  `media_subpath`. O include `media-url.html` do tema **sempre** prefixa
+  `media_subpath` a `page.image.path`, então os dois juntos duplicavam o
+  caminho (`.../visualizando-pipelines/assets/img/posts/visualizando-
+  pipelines/diagrama.png`), e o `htmlproofer` reprovou a imagem inexistente.
+  Corrigido: `image.path` passou a ser só `diagrama.png` (o nome do
+  arquivo), com `media_subpath` provendo o diretório — é assim que o tema
+  espera receber os dois campos juntos, confirmado lendo
+  `_includes/media-url.html` do gem.
+- Red: com os três posts temporariamente movidos para fora de `_posts/`
+  (`mv` para fora do repositório, não `git rm`), `docker compose run --rm
+  site bash tools/check.sh` — os 7 casos novos falharam por asserção (post
+  ausente, categoria/tag ausente, índice de busca sem as URLs), 0 erros.
+  Os testes que chamam `read(...)` direto foram escritos com um
+  `assert exists?(...)` antes, para a ausência de arquivo dar falha de
+  asserção e não `Errno::ENOENT` (erro, não falha) — decisão de design dos
+  testes, não do plan.
+- Green: posts restaurados (`mv` de volta); mesmo comando — 22 runs, 55
+  assertions, 0 failures, 0 errors. `test_categoria_de_um_nivel_...` já
+  passava mesmo no Red, porque as fixtures da Etapa 4 (`project: true` com
+  `categories: [Desenvolvimento]`) já bastam para exercitar o trigger
+  desabilitado — o teste cobre comportamento geral do tema, não é exclusivo
+  destes 3 posts; registrado, não é um problema.
+- Refactor: conferência visual com `docker compose run -d --rm --service-
+  ports site bash tools/run.sh -H 0.0.0.0` + `curl` em home, `/posts/api-
+  tarefas-ruby/`, `/categories/ci%C3%AAncia-de-dados/`, `/tags/ruby/`,
+  `/about/` e `/assets/js/data/search.json` — todos HTTP 200 com o conteúdo
+  esperado (link do repositório, posts listados, índice de busca com o
+  post técnico).
+- `auditoria-de-impacto` rodada sobre o diff antes do commit: sem efeitos
+  irreversíveis (`noindex: true` continua ativo, sem push); sem achados
+  bloqueantes. Confirmado: nenhuma colisão de nome entre os posts reais
+  (`2026-01-05`/`10`/`15`) e as fixtures da Etapa 4 (`2026-01-01`/`02`).
+- Gate: `docker compose run --rm site bash tools/check.sh` — validador 26
+  runs/0 falhas; build produção + htmlproofer 19 arquivos/26 links
+  internos/0 falhas; `site_test.rb` 22 runs/55 assertions/0 falhas/0 erros.
+- Commit `3298eae`. Step 6 decomposto na Checklist.
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -330,6 +398,15 @@ vai se ajustar ao que o scaffold revelar.
 - [x] Análise estática / lint — `bash -n tools/check.sh` — sem saída (ok); nenhum `.rb` alterado nesta etapa
 - [x] Artefato visível — `_site/posts/fixture-post-projeto/index.html` e `_site/posts/fixture-post-comum/index.html` gerados durante o gate (symlinks efêmeros); conferência de conteúdo por leitura do HTML nos testes, igual ao Step 3 — inspeção visual com posts reais fica para o Step 5
 - [x] Limpeza pós-gate — `ls _posts/` após `check.sh` — só `.placeholder` pré-existente, nenhum symlink de fixture residual
+
+### 2026-09-18 — Step 5
+
+- [x] Red — `docker compose run --rm site bash tools/check.sh` (posts reais fora de `_posts/`) — validador 26 runs/0 falhas; build 10 arquivos/16 links/0 falhas; `site_test.rb` 22 runs/35 assertions/7 falhas/0 erros, todas as 7 falhas novas por asserção
+- [x] Green — mesmo comando, com os três posts restaurados — validador 26 runs/0 falhas; build produção + htmlproofer 19 arquivos/26 links internos/0 falhas; `site_test.rb` 22 runs/55 assertions/0 falhas/0 erros
+- [x] Auditoria de impacto — sem efeitos irreversíveis; sem achados bloqueantes; confirmado sem colisão de nome com as fixtures da Etapa 4
+- [x] Suíte de testes (gate completo) — `docker compose run --rm site bash tools/check.sh` — mesmos números do Green acima
+- [x] Análise estática / lint — nenhum `.rb`/`.sh` alterado nesta etapa
+- [x] Artefato visível — conferência visual via `tools/run.sh` + `curl`: home (200, lista os 3 posts), `/posts/api-tarefas-ruby/` (200, link do repositório), `/categories/ci%C3%AAncia-de-dados/` (200, lista os posts da categoria), `/tags/ruby/` (200), `/about/` (200), `/assets/js/data/search.json` (200, contém o post técnico)
 
 ## Wrap up
 
