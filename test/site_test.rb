@@ -74,4 +74,17 @@ class SiteTest < Minitest::Test
   def test_compose_yaml_nao_publicado
     refute exists?("compose.yaml"), "_site/compose.yaml não deveria existir"
   end
+
+  def test_post_de_projeto_tem_link_do_repositorio
+    post = read("posts/fixture-post-projeto/index.html")
+    assert_match(
+      %r{href="https://github\.com/ebenezer-dorneles/fixture-exemplo"},
+      post
+    )
+  end
+
+  def test_post_comum_nao_tem_bloco_de_repositorio
+    post = read("posts/fixture-post-comum/index.html")
+    refute_match(/project-repo/, post)
+  end
 end
