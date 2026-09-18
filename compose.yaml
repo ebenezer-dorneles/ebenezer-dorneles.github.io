@@ -1,0 +1,20 @@
+# Ambiente local com Ruby 3.4, igual ao CI. Ver docs/specs/blog-portfolio/plan.md (Step 0).
+#   gate:    docker compose run --rm site bash tools/check.sh
+#   preview: docker compose run --rm --service-ports site bash tools/run.sh -H 0.0.0.0
+services:
+  site:
+    build:
+      context: tools/docker
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    volumes:
+      # :z — SELinux em enforcing no host; sem o rótulo o container não lê o repositório.
+      - .:/srv/site:z
+      # Gems fora do repositório e persistentes entre execuções.
+      - bundle:/usr/local/bundle
+    ports:
+      - "4000:4000"
+
+volumes:
+  bundle:
