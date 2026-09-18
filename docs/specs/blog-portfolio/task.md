@@ -43,34 +43,40 @@ vai se ajustar ao que o scaffold revelar.
   - [x] Green: `tools/check.sh` completo — acrescentado `tools/test.sh` e `test/site_test.rb` ao final (validador → testes unitários → build+htmlproofer → testes de integração do site)
   - [x] Refactor: `_config.yml` mantém ordem e comentários do starter; só os valores mudam (mais duas adições nossas sem equivalente no starter: chave `noindex` e dois itens no `exclude:`)
   - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [ ] **Step 4 — Layout `project-post` e template de projeto** (Red/Green/Refactor em plan → Step 4)
-  - [ ] Red: fixture de post com `project: true` (exclusiva do teste, fora de `_posts/`); `site_test.rb` exige o link de `repo` no HTML do post e a ausência do bloco em post comum
-  - [ ] Green: `_layouts/project-post.html` com `layout: post`, bloco do repositório antes de `{{ content }}`
-  - [ ] Green: `_drafts/template-projeto.md` com as cinco seções da regra 13 e front matter que passa no validador (o validador do Step 2 cobra isso)
-  - [ ] Refactor: reusar strings de `_data/locales` quando houver; senão, texto em pt-BR no layout, registrado como dívida de i18n da fase 2
+- [x] **Step 4 — Layout `project-post` e template de projeto** (Red/Green/Refactor em plan → Step 4)
+  - [x] Red: fixture de post com `project: true` (exclusiva do teste, fora de `_posts/`); `site_test.rb` exige o link de `repo` no HTML do post e a ausência do bloco em post comum
+  - [x] Green: `_layouts/project-post.html` com `layout: post`, bloco do repositório antes de `{{ content }}`
+  - [x] Green: `_drafts/template-projeto.md` com as cinco seções da regra 13 e front matter que passa no validador (o validador do Step 2 cobra isso)
+  - [x] Refactor: reusar strings de `_data/locales` quando houver; senão, texto em pt-BR no layout, registrado como dívida de i18n da fase 2
+  - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
+- [ ] **Step 5 — Três posts fictícios** (Red/Green/Refactor em plan → Step 5)
+  - [ ] Red: `site_test.rb` exige, contra os posts reais que serão adicionados: home em ordem decrescente de data (regra 9); página de cada categoria e de cada tag usadas; categoria com **um** item renderiza sem árvore quebrada (Audit item 17); tempo de leitura visível no post (regra 4); entrada de cada post no índice de busca do tema; bloco `.highlight` (Rouge) e Mermaid no post técnico; imagem servida de `assets/img/posts/<slug>/`
+  - [ ] Green: três posts em `_posts/` — um por categoria (Ciência de Dados, Desenvolvimento), o terceiro com bloco de código, diagrama Mermaid e imagem própria; todos com `title` prefixado `[RASCUNHO]` e `repo` placeholder sintaticamente válido (ver spec → Decisions, "Conteúdo do MVP é fictício"); imagem redimensionada antes de commitar
+  - [ ] Green: pelo menos um dos três usa `project: true` + `layout: project-post` (exercita o Step 4 com conteúdo real, não só fixture)
+  - [ ] Atenção: com posts reais em `_posts/`, as fixtures de `test/fixtures/site_posts/` (Step 4) continuam ok enquanto `noindex: true` — ver Watch out
+  - [ ] Refactor: conferência visual com `bash tools/run.sh` (home, post, categoria, tag, busca digitada, "sobre")
   - [ ] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [ ] Step 5 — Três posts fictícios
 - [ ] Step 6 — README, remote e primeiro deploy
 
 ## State Handover
 
-- **Done:** Steps 0–3. Step 3 (configuração do site) fechado: `_config.yml`
-  preenchido (`title`, `tagline`, `description`, `url`, `lang: pt-BR`,
-  `timezone: America/Sao_Paulo`, `github.username: ebenezer-dorneles`,
-  `social.{name,email,links}` com GitHub + LinkedIn), `noindex: true` (chave
-  nova, sem equivalente no starter) e `draft`/`compose.yaml` no `exclude:`.
-  `_includes/metadata-hook.html` emite o `<meta robots>` quando `site.noindex`
-  é `true` (única sobrescrita de arquivo do gem, aprovada). `_data/contact.yml`
-  com LinkedIn ativado (`https://www.linkedin.com/in/ebedorneles/`); e-mail de
-  contato `ebenezerdorneles@gmail.com` (confirmado pelo autor via
-  `AskUserQuestion`, não inventado). `_tabs/about.md` com bio provisória
-  marcada como tal. `tools/check.sh` completo: validador → testes unitários →
-  `tools/test.sh` → `test/site_test.rb` (12 casos: lang, meta robots, sitemap,
-  robots.txt, links de contato, `/about/`, ausência de `test`/`draft`/`docs`/
-  `compose.yaml` em `_site/`). Nada foi enviado ao `origin`.
-- **Next:** Step 4 — Layout `project-post` e template de projeto (ver plan.md →
-  Stages e a Checklist já decomposta acima).
-- **Blockers / open decisions:** nenhum para os Steps 4–5. Antes do Step 6, o autor
+- **Done:** Steps 0–4. Step 4 (layout `project-post` e template de projeto)
+  fechado: `_layouts/project-post.html` herda `layout: post` e injeta um bloco
+  com o link de `page.repo` antes de `{{ content }}` — nenhum arquivo do tema
+  sobrescrito. `_drafts/template-projeto.md` com as cinco seções da regra 13
+  (contexto, stack técnica, processo, resultado, aprendizados) e front matter
+  que passa no validador. `test/fixtures/site_posts/` (novo diretório) tem
+  duas fixtures exclusivas de teste — uma com `project: true`, outra comum —
+  usadas só durante o gate: `tools/check.sh` agora symlinka essas fixtures em
+  `_posts/` antes de buildar e as remove com um `trap` no `EXIT`, mesmo se um
+  passo anterior falhar. `test/site_test.rb` ganhou 2 casos: link do
+  repositório presente no post de projeto, ausente no post comum. Texto do
+  bloco do repositório é pt-BR fixo no layout (sem chave equivalente em
+  `_data/locales`), registrado como dívida de i18n da fase 2. Nada foi
+  enviado ao `origin`.
+- **Next:** Step 5 — Três posts fictícios (ver plan.md → Stages e a Checklist
+  já decomposta acima).
+- **Blockers / open decisions:** nenhum para o Step 5. Antes do Step 6, o autor
   precisa confirmar Pages → Source = **GitHub Actions**.
 - **Watch out:**
   - Todo comando Ruby/Jekyll roda **dentro** do container (`docker compose run --rm site …`).
@@ -92,6 +98,13 @@ vai se ajustar ao que o scaffold revelar.
     (`twitter_username`) — fora do escopo da regra 12, mas vai aparecer no meta
     `twitter:site` se o site for publicado assim. Não bloqueia o MVP; registrar se
     virar item de fase 2.
+  - **Achado da auditoria de impacto do Step 4, ainda sem correção:** as fixtures
+    de `test/fixtures/site_posts/` têm título `[RASCUNHO]…`, o que o validador só
+    aceita com `noindex: true`. Quando o marco de saída do MVP remover o
+    `noindex`, o gate (`tools/check.sh`) vai passar a reprovar essas fixtures.
+    Tratar junto da remoção dos posts fictícios (Decisions → "marco de saída do
+    MVP"): tirar o prefixo `[RASCUNHO]` das fixtures (elas não são posts reais,
+    não precisam do marcador) antes ou junto dessa mudança.
 
 ## Execution Log
 
@@ -221,6 +234,50 @@ vai se ajustar ao que o scaffold revelar.
   Handover → Watch out.
 - Commit `a6ba685`. Step 4 decomposto na Checklist.
 
+### 2026-09-18 — Step 4: layout `project-post` e template de projeto
+
+- **Decisão fora do texto literal do plan:** o plan pedia uma "fixture de post
+  com `project: true` (exclusiva do teste, fora de `_posts/`)", sem dizer como
+  ela chega a ser renderizada — `site_test.rb` só lê `_site/` já buildado, e
+  Jekyll não builda nada fora de `_posts/`/`_drafts/` como post. Resolvido com
+  `test/fixtures/site_posts/` (duas fixtures, uma `project: true` e outra
+  comum) symlinkadas em `_posts/` só durante `tools/check.sh`, via `trap` no
+  `EXIT` que desfaz o link mesmo se um passo anterior falhar. Sem isso, as
+  fixtures teriam que morar em `_posts/` de verdade (poluindo o histórico
+  antes do Step 5) ou o teste teria que buildar o site sozinho (duplicando o
+  que `tools/test.sh` já faz).
+- Red: `docker compose run --rm site bash tools/check.sh` com as fixtures
+  symlinkadas, `_layouts/project-post.html` ainda inexistente — build
+  completou com aviso do Jekyll ("Layout 'project-post' … does not exist"),
+  sem quebrar o gate; `site_test.rb`: 14 runs, 1 falha (por asserção: link do
+  repositório ausente no HTML), 0 erros. Confirma que o teste falha pelo
+  motivo certo, não por build quebrado.
+- Green: `_layouts/project-post.html` com `layout: post` no próprio front
+  matter e o bloco do repositório antes de `{{ content }}` — herança de
+  layout, nenhum arquivo do tema sobrescrito (Decisions/Audit item 3).
+  `_drafts/template-projeto.md` com as cinco seções da regra 13 em headings
+  `##`, comentários HTML de orientação (sem efeito em produção), front matter
+  válido (`project: true`, `layout: project-post`, `repo` placeholder) —
+  conferido junto do validador no gate.
+- `auditoria-de-impacto` rodada sobre o diff antes do commit: sem efeitos
+  irreversíveis (o symlink é local e desfeito pelo trap; testado que uma
+  falha de `ln -s` por colisão de nome não apaga nada, porque só entra no
+  array de limpeza depois de criado com sucesso). Achado registrado, não
+  bloqueante: as fixtures usam título `[RASCUNHO]`, que exige `noindex: true`
+  no validador — vai quebrar o gate quando o `noindex` for removido no marco
+  de saída do MVP, se as fixtures não forem ajustadas junto. Ver State
+  Handover → Watch out.
+- Refactor: texto do bloco do repositório é pt-BR fixo (`_data/locales/pt-BR.yml`
+  não tem chave equivalente a "repositório do projeto"), comentado no próprio
+  layout como dívida de i18n da fase 2. Classes CSS reusam utilitários já
+  presentes no tema (Bootstrap), sem `style` inline e sem copiar markup de
+  `post.html`.
+- Gate: `docker compose run --rm site bash tools/check.sh` — validador 26
+  runs/0 falhas; build produção + htmlproofer 10 arquivos/16 links internos/0
+  falhas; `site_test.rb` 14 runs/0 falhas/0 erros. `_posts/` conferido depois:
+  só o `.placeholder` pré-existente, sem symlink residual.
+- Commit `c971568`. Step 5 decomposto na Checklist.
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -263,6 +320,16 @@ vai se ajustar ao que o scaffold revelar.
 - [x] Suíte de testes (gate completo) — `docker compose run --rm site bash tools/check.sh` — validador 26 runs/0 falhas; build produção + htmlproofer 6 arquivos/12 links internos/0 falhas; `site_test.rb` 12 runs/0 falhas
 - [x] Análise estática / lint — `bash -n tools/check.sh` — sem saída (ok); `ruby -wc tools/validate-front-matter.rb` — `Syntax OK` (arquivo não tocado nesta etapa, conferido por precaução)
 - [x] Artefato visível — `_site/index.html`, `_site/about/index.html` gerados pelo `tools/test.sh`; conferência de conteúdo feita por leitura do HTML nos testes (lang, meta robots, links), não por inspeção visual nesta etapa — a inspeção com `tools/run.sh` fica para o Step 5, quando houver posts reais a navegar
+
+### 2026-09-18 — Step 4
+
+- [x] Red — `docker compose run --rm site bash tools/check.sh` (fixtures symlinkadas, layout ainda inexistente) — validador 26 runs/0 falhas; build com aviso de layout ausente, sem falhar; `site_test.rb` 14 runs/1 falha/0 erros, falha por asserção (link ausente)
+- [x] Green — mesmo comando, após `_layouts/project-post.html` e `_drafts/template-projeto.md` — validador 26 runs/0 falhas; build produção + htmlproofer 10 arquivos/16 links internos/0 falhas; `site_test.rb` 14 runs/0 falhas/0 erros
+- [x] Auditoria de impacto — sem efeitos irreversíveis; achado não bloqueante sobre `[RASCUNHO]` das fixtures vs. `noindex`, registrado no State Handover
+- [x] Suíte de testes (gate completo) — `docker compose run --rm site bash tools/check.sh` — mesmos números do Green acima
+- [x] Análise estática / lint — `bash -n tools/check.sh` — sem saída (ok); nenhum `.rb` alterado nesta etapa
+- [x] Artefato visível — `_site/posts/fixture-post-projeto/index.html` e `_site/posts/fixture-post-comum/index.html` gerados durante o gate (symlinks efêmeros); conferência de conteúdo por leitura do HTML nos testes, igual ao Step 3 — inspeção visual com posts reais fica para o Step 5
+- [x] Limpeza pós-gate — `ls _posts/` após `check.sh` — só `.placeholder` pré-existente, nenhum symlink de fixture residual
 
 ## Wrap up
 
