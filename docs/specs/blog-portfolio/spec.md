@@ -381,6 +381,16 @@ Post-ship review feedback. Dated entries. Do NOT splice these into "Decisions" a
 issue and a new `## Plan — <ISSUE>` section in plan.md.
 -->
 
+**2026-09-18 — `noindex` via `_includes/metadata-hook.html` (aprovado pelo autor).** O
+`noindex` global precisa de um ponto de injeção no `<head>`, e o único que o tema
+oferece é `metadata-hook.html`: placeholder vazio do gem 7.6.0 (`<!-- A placeholder to
+allow defining custom metadata -->`), incluído por `_includes/head.html`. Sombreá-lo
+diverge da **letra** da decisão "nenhum arquivo do tema sobrescrito", mas não do
+**motivo** dela: o arquivo é feito para ser sobrescrito e um bump do tema não gera
+conflito. Alternativa descartada: sobrescrever `head.html`, que é exatamente a
+divergência que a decisão evita. Esta é a única exceção. Ver `plan.md` → BLOG-1 →
+Strategy.
+
 ---
 
 ## Audit — 2026-09-17
