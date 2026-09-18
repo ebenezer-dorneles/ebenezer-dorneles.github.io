@@ -87,4 +87,66 @@ class SiteTest < Minitest::Test
     post = read("posts/fixture-post-comum/index.html")
     refute_match(/project-repo/, post)
   end
+
+  def test_home_lista_posts_em_ordem_cronologica_decrescente
+    home = read("index.html")
+    posicoes = [
+      "/posts/visualizando-pipelines/",
+      "/posts/api-tarefas-ruby/",
+      "/posts/analise-exploratoria-vendas/"
+    ].map { |url| home.index(%(href="#{url}")) }
+
+    posicoes.each { |posicao| refute_nil posicao, "post ausente da home" }
+    assert_equal posicoes, posicoes.sort, "posts fora de ordem cronológica decrescente"
+  end
+
+  def test_categorias_tem_pagina_por_categoria
+    assert exists?("categories/desenvolvimento/index.html"),
+           "_site/categories/desenvolvimento/ não foi gerado"
+    assert exists?("categories/ciência-de-dados/index.html"),
+           "_site/categories/ciência-de-dados/ não foi gerado"
+  end
+
+  def test_categoria_de_um_nivel_nao_gera_arvore_quebrada
+    # Chirpy suporta categorias de dois níveis e mostra um trigger de
+    # expandir/colapsar para o nível filho. Com um nível só (contrato do
+    # spec), o trigger deve ficar desabilitado, não ausente/quebrado.
+    assert_match(/category-trigger[^"]*disabled/, read("categories/index.html"))
+  end
+
+  def test_tags_tem_pagina_por_tag_usada
+    %w[python dados ruby jekyll visualizacao].each do |tag|
+      assert exists?("tags/#{tag}/index.html"), "_site/tags/#{tag}/ não foi gerado"
+    end
+  end
+
+  def test_tempo_de_leitura_visivel_no_post
+    assert exists?("posts/api-tarefas-ruby/index.html"), "post não foi gerado"
+    assert_match(%r{<em>\d+ min</em>}, read("posts/api-tarefas-ruby/index.html"))
+  end
+
+  def test_post_tecnico_tem_highlight_e_mermaid
+    assert exists?("posts/visualizando-pipelines/index.html"), "post não foi gerado"
+    post = read("posts/visualizando-pipelines/index.html")
+    assert_match(/class="highlight"/, post)
+    assert_match(/language-mermaid/, post)
+  end
+
+  def test_imagem_do_post_e_servida_e_referenciada
+    assert exists?("posts/visualizando-pipelines/index.html"), "post não foi gerado"
+    post = read("posts/visualizando-pipelines/index.html")
+    assert_match(%r{src="/assets/img/posts/visualizando-pipelines/diagrama\.png"}, post)
+    assert exists?("assets/img/posts/visualizando-pipelines/diagrama.png"),
+           "imagem não foi copiada para _site/"
+  end
+
+  def test_indice_de_busca_lista_os_tres_posts_ficticios
+    assert exists?("assets/js/data/search.json"), "índice de busca não foi gerado"
+    indice = read("assets/js/data/search.json")
+    [
+      "/posts/analise-exploratoria-vendas/",
+      "/posts/api-tarefas-ruby/",
+      "/posts/visualizando-pipelines/"
+    ].each { |url| assert_includes indice, url }
+  end
 end
