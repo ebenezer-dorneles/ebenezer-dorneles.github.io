@@ -1,0 +1,97 @@
+<!-- JS selector for site. -->
+
+<!--
+  Override do include original do jekyll-theme-chirpy 7.6.0.
+  Normaliza `project-post` como `post` para carregar `post.min.js`
+  (init do mermaid, dayjs, lazy-polyfill etc.), já que o Chirpy escolhe
+  o bundle pelo nome exato de `page.layout`.
+-->
+
+{% assign _layout = page.layout %}
+{% if _layout == 'project-post' %}
+  {% assign _layout = 'post' %}
+{% endif %}
+
+<!-- commons -->
+
+{% assign urls = site.data.origin[type].search.js %}
+
+<!-- layout specified -->
+
+{% if _layout == 'post' or _layout == 'page' or _layout == 'home' %}
+  {% assign urls = urls | append: ',' | append: site.data.origin[type]['lazy-polyfill'].js %}
+
+  {% unless _layout == 'home' %}
+    <!-- image lazy-loading & popup & clipboard -->
+    {% assign urls = urls
+      | append: ','
+      | append: site.data.origin[type].glightbox.js
+      | append: ','
+      | append: site.data.origin[type].clipboard.js
+    %}
+  {% endunless %}
+{% endif %}
+
+{% if _layout == 'home'
+  or _layout == 'post'
+  or _layout == 'archives'
+  or _layout == 'category'
+  or _layout == 'tag'
+%}
+  {% assign locale = include.lang | split: '-' | first %}
+
+  {% assign urls = urls
+    | append: ','
+    | append: site.data.origin[type].dayjs.js.common
+    | append: ','
+    | append: site.data.origin[type].dayjs.js.locale
+    | replace: ':LOCALE', locale
+    | append: ','
+    | append: site.data.origin[type].dayjs.js.relativeTime
+    | append: ','
+    | append: site.data.origin[type].dayjs.js.localizedFormat
+  %}
+{% endif %}
+
+{% if page.content contains '<h2' or page.content contains '<h3' and site.toc and page.toc %}
+  {% assign urls = urls | append: ',' | append: site.data.origin[type].toc.js %}
+{% endif %}
+
+{% if page.mermaid %}
+  {% assign urls = urls | append: ',' | append: site.data.origin[type].mermaid.js %}
+{% endif %}
+
+{% include jsdelivr-combine.html urls=urls %}
+
+{% case _layout %}
+  {% when 'home', 'categories', 'post', 'page' %}
+    {% assign js = _layout %}
+  {% when 'archives', 'category', 'tag' %}
+    {% assign js = 'misc' %}
+  {% else %}
+    {% assign js = 'commons' %}
+{% endcase %}
+
+{% capture script %}/assets/js/dist/{{ js }}.min.js{% endcapture %}
+
+<script defer src="{{ script | relative_url }}"></script>
+
+{% if page.math %}
+  <!-- MathJax -->
+  <script src="{{ '/assets/js/data/mathjax.js' | relative_url }}"></script>
+  <script id="MathJax-script" async src="{{ site.data.origin[type].mathjax.js | relative_url }}"></script>
+{% endif %}
+
+<!-- Pageviews -->
+{% if _layout == 'post' %}
+  {% assign provider = site.pageviews.provider %}
+
+  {% if provider and provider != empty %}
+    {% case provider %}
+      {% when 'goatcounter' %}
+        {% if site.analytics[provider].id != empty and site.analytics[provider].id %}
+          {% include pageviews/{{ provider }}.html %}
+        {% endif %}
+    {% endcase %}
+  {% endif %}
+{% endif %}
