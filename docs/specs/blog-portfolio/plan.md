@@ -467,3 +467,80 @@ Contract do ssd-plan diz que a compactação (mover detalhe de plan finalizado p
 `task.md` Execution Log e deixar pointer aqui) é responsabilidade do ssd-task no
 próximo pass. Registrado para ssd-task tratar ao decompor BLOG-3 ou ao abrir plan de
 BLOG-2.
+
+### Amendment — 2026-09-29
+
+Origem: deviation plan-affecting registrada em `task.md ## Deviations` (2026-09-29):
+
+> Plan de BLOG-3 § Context afirma "check.sh verde no último commit (`b1e1bfe`)".
+> A baseline coletada em HEAD `e1cb549` mostra 6 falhas em `test/site_test.rb`,
+> todas resíduo do commit `686c5c0` ("chore(content): remove posts fictícios de
+> prototipagem"), que precede `b1e1bfe`. Testes afetados:
+> `test_post_tecnico_tem_highlight_e_mermaid`,
+> `test_indice_de_busca_lista_os_tres_posts_ficticios`,
+> `test_imagem_do_post_e_servida_e_referenciada`,
+> `test_home_lista_posts_em_ordem_cronologica_decrescente`,
+> `test_tempo_de_leitura_visivel_no_post`,
+> `test_tags_tem_pagina_por_tag_usada`.
+
+Escolha do autor (2026-09-29, via `AskUserQuestion`): opção (b) — aceitar gate
+red com invariante estrita de contagem em vez de reordenar BLOG-2 antes de
+BLOG-3. BLOG-3 continua sendo comments-only e não toca o comportamento das 6
+falhas; elas ficam com BLOG-2 Fase técnica (D-2), conforme `### Deferred` já
+registrava.
+
+**Context (retificação).** Claim "check.sh verde em `b1e1bfe`" revogada.
+Baseline real em HEAD `e1cb549` (fonte: `task.md ## Verification → 2026-09-29
+— BLOG-3 Baseline`):
+
+- validador (`test/validate_front_matter_test.rb` + CLI):
+  **26 runs / 29 assertions / 0 failures / 0 errors** (verde)
+- build produção + htmlproofer: **16 arquivos / 22 links internos / 0 falhas** (verde)
+- `test/site_test.rb`: **22 runs / 37 assertions / 6 failures / 0 errors**
+  (red pré-existente por remoção de slugs em `686c5c0`; hoje só existe 1 post
+  real, `2026-09-29-etl-dados-prf.md`)
+
+Consequência: `check.sh` sai com código ≠ 0 (site_test.rb dispara `set -e`),
+mas os três passos anteriores ainda emitem suas contagens antes do abort. As 6
+falhas são fora do escopo de BLOG-3 e serão curadas por BLOG-2 D-2 (reescrever
+`site_test.rb` para invariantes estruturais que não citem slugs específicos).
+
+**Tooling & commands (mudança).**
+
+- Row "Baseline (antes da 1ª mudança)" — critério deixa de ser "parte verde" e
+  passa a ser "registrar contagem exata". Baseline em HEAD `e1cb549` já
+  registrada em task.md.
+- Row "Full test suite" — invariante deixa de ser "verde" e passa a ser
+  **igualdade estrita de contagem antes/depois**: `26/29/0/0` no validador,
+  `22 links/0 falhas` no htmlproofer, `22/37/6/0` no site_test.rb. Igualdade
+  prova "diff só de comentários" com mais rigor do que "verde" faria.
+- Row "Targeted (Fase 1)" — inalterada (validador está verde no baseline).
+- Row "Targeted (Fase 2)" — invariante passa a ser `22 runs / 37 assertions /
+  6 failures / 0 errors`, com as **mesmas 6 asserções falhas e mesmas
+  mensagens** antes e depois.
+
+**Phase 2 — Done when (mudança).** Substituir "docker compose run --rm site
+bash tools/check.sh verde" por:
+
+- validador: `26/29/0/0` (idem baseline)
+- htmlproofer: `22 links / 0 falhas` (idem baseline)
+- site_test.rb: `22/37/6/0` (idem baseline; conjunto exato das 6 falhas
+  inalterado, verificado pelo próprio nome dos testes na saída do minitest)
+- `grep -c "# @spec" test/site_test.rb` é 22
+- `ruby -wc test/site_test.rb` limpo
+- `auditoria-de-impacto` fecha "diff só de comentários"
+
+**Phase 3 — Done when (mudança).** "tools/check.sh continua verde" →
+"tools/check.sh apresenta as mesmas contagens do baseline (validador
+`26/29/0/0`; htmlproofer `22 links/0 falhas`; site_test.rb `22/37/6/0`, com o
+mesmo conjunto de falhas)".
+
+**Coverage (sem mudança).** As linhas da matriz que apontam para os 6 testes
+red (AC-4.1, AC-5.1, AC-9.1, AC-10.2, AC-16.1, AC-19.1, AC-19.2) continuam
+corretas — o mapeamento AC→teste independe do teste estar verde hoje. Quando
+BLOG-2 D-2 reescrever `site_test.rb`, as tags `# @spec` aplicadas nesta issue
+sobrevivem à reescrita (`### Strategy` já previu isso), então a Coverage não
+precisa ser rescrita agora.
+
+**Deferred (mantido).** BLOG-2 Fase técnica continua depois de BLOG-3 fechar;
+ordenação preservada.
