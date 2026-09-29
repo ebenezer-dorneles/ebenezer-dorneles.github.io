@@ -222,3 +222,248 @@ exceto `metadata-hook.html` (ver Strategy).
   assets (`.gitmodules` volta junto).
 - Validação de `description` ≤ 160 e de existência do `repo`: fora do validador, como o
   spec já determina.
+
+## Plan — BLOG-3
+
+Spec revision: 4
+
+Escopo: **naming e rastreabilidade** (D-12 / rev 4). Adicionar tag `FR-n`/`AC-n.m` em
+cada teste de `test/validate_front_matter_test.rb` e `test/site_test.rb`, e escrever
+esta matriz `## Coverage` cobrindo os 41 ACs do `## Requirements`. **Sem mudança de
+comportamento**: nenhum `_config.yml`, `tools/`, `_layouts/`, `_includes/`, `_posts/`
+ou `_data/` é tocado. Precondição: spec rev 4 aprovada (autor, 2026-09-29, `## Approvals`).
+
+### Context
+
+Estado hoje (2026-09-29, branch `blog-1-mvp`):
+
+- `test/validate_front_matter_test.rb` — 26 métodos `test_*` (25 unit + 2 CLI); nomes
+  descritivos em pt-BR, sem tag de AC (ex.: `test_title_ausente:27`,
+  `test_repo_fora_do_formato_github:125`).
+- `test/site_test.rb` — 22 métodos `test_*`; nomes descritivos em pt-BR sem tag de AC
+  (ex.: `test_home_tem_meta_robots_noindex:29`, `test_indice_de_busca_lista_os_tres_posts_ficticios:143`).
+- `## Requirements` do spec define 20 FRs e ~41 ACs; `## Audit — rev 4` confirma
+  Coverage regra→FR e UC→FR→AC 100% completa (spec:1401–1407).
+- `docker compose run --rm site bash tools/check.sh` **verde no último commit** (`b1e1bfe`):
+  26 runs no validador + build+htmlproofer + 22 runs no site_test.
+- BLOG-2 (D-2) vai reescrever `test/site_test.rb` mais tarde. A tag de AC precisa ser
+  **transportável**: convenção que sobrevive à reescrita (comentário estruturado
+  imediatamente antes de `def test_*`), não embutida no nome (que muda quando a
+  asserção vira invariante estrutural).
+
+Padrão de referência: nenhum no repositório (minitest usado sem convenção de tag hoje).
+O contrato do ssd-verify menciona `validation.md` matriz por AC → arquivo:linha, o que
+`grep -n "# @spec"` já resolve.
+
+### Strategy
+
+- **Um comentário Ruby estruturado por teste, imediatamente antes do `def`**, no
+  formato `# @spec FR-N AC-N.M` (múltiplos ACs separados por espaço quando um teste
+  cobre mais de um). Alternativa rejeitada: prefixo no nome do método
+  (`test_ac_1_1_...`) — mais visível em falhas do minitest, mas custa churn em ~48
+  nomes e obriga BLOG-2 a renomear ao reescrever `site_test.rb`. Comentário estruturado
+  sobrevive à reescrita e é grep-friendly (`grep -n "# @spec"`).
+- **Coverage é a fonte de verdade da rastreabilidade**, não o comentário no teste. A
+  matriz abaixo mapeia cada AC → teste (arquivo:linha) ou → destino não-testado com
+  motivo (BLOG-2 Verification externa, manual/editorial, Fase 2). Um AC sem
+  destino é gap → CR.
+- **Testes que cobrem invariantes de decisão** (não AC direto) recebem tag `# @spec
+  D-N` ou `# @spec AU-N` conforme origem (ex.: `test_categoria_de_um_nivel_...`
+  origina-se de Audit item 17 → `# @spec AU-17 (rev 1)`).
+- **O que não muda:** nenhuma lógica de teste; nenhum código do validador ou dos
+  layouts; nenhum artefato de conteúdo; nenhum arquivo de config. Diff é 100%
+  comentários adicionados.
+
+### Tooling & commands
+
+Comandos rodam via `docker compose run --rm site …` (Step 0 do BLOG-1). O gate único
+continua sendo `tools/check.sh` (não muda nesta issue).
+
+| Check | Command | Scope | Why |
+|---|---|---|---|
+| Baseline (antes da 1ª mudança) | `docker compose run --rm site bash tools/check.sh` | validador + testes unit + build + htmlproofer + site_test | confirmar que a base parte verde (registrar contagem exata: 26 runs validador, 22 runs site_test) |
+| Full test suite | `docker compose run --rm site bash tools/check.sh` | tudo | invariante: mesmo número de runs antes e depois (comentário não muda teste) |
+| Targeted (Fase 1) | `docker compose run --rm site bundle exec ruby -Itest test/validate_front_matter_test.rb` | 26 runs | verifica tags aplicadas sem regressão |
+| Targeted (Fase 2) | `docker compose run --rm site bundle exec ruby -Itest test/site_test.rb` | 22 runs | idem para site_test |
+| Cross-check da Coverage (Fase 3) | `grep -n "# @spec" test/*.rb \| wc -l` e `grep -n "def test_" test/*.rb \| wc -l` | grep | a diferença deve ser exatamente **1** (o `test_valid_post_has_no_errors` baseline, tag `FR-1`) |
+| Análise estática | `docker compose run --rm site ruby -wc test/validate_front_matter_test.rb test/site_test.rb` | ambos os arquivos | comentário mal formado (aspas erradas, encoding) reprova aqui |
+| Lint / formatting | `bash -n tools/check.sh` (não muda; conferência de regressão) | check.sh | precaução; nenhuma edição prevista em `tools/` |
+| Artifact regeneration | n/a | — | issue não gera artefato visível ao leitor (só comentários no código) |
+
+**Baseline a registrar no task.md antes da Fase 1:** contagem exata de runs, assertions,
+falhas e erros de cada suite; hash do último commit (`git rev-parse HEAD`).
+
+### Review & code standards
+
+- **Autor único, sem PR** (mesmo padrão do BLOG-1). Antes do commit: skill
+  `auditoria-de-impacto` sobre o diff — específica para "diff só de comentários":
+  confirmar que nenhum `def`, `assert*`, `refute*`, `require` ou constante mudou.
+- **Convenção do comentário-tag**, aplicada uniformemente:
+  - Linha única, imediatamente antes de `def test_*`, sem linha em branco entre elas.
+  - Formato: `# @spec <TAG> [<TAG>...]` onde `<TAG>` é `FR-N`, `AC-N.M`, `D-N` ou
+    `AU-N` (revisão citada se AU vier de rev específica: `AU-17 (rev 1)`).
+  - Múltiplos tags no mesmo teste separados por espaço único.
+  - Testes de CLI ganham tag `FR-N (CLI)` (ex.: `# @spec FR-1 (CLI)`).
+  - Testes de regressão da `auditoria-de-impacto` (test_tag_nao_string_..., test_repo_nao_string_...)
+    tagueiam o AC que exercitam mais o marcador `(auditoria-de-impacto)`.
+- **Diretrizes de escopo** (não fazer, mesmo se tentador):
+  - Não renomear teste; não reorganizar; não extrair helper; não alterar mensagens
+    de asserção. Cada uma dessas mudanças precisa de spec/plan próprio.
+  - Não adicionar teste novo mesmo que um AC esteja sem cobertura — isso é gap de
+    escopo do BLOG-1 e vai para Coverage → não-testados com motivo.
+- **Padrão Ruby** (não muda): `# frozen_string_literal: true`, `snake_case`,
+  minitest declarativo sem DSL.
+
+### Phases
+
+Ordenadas por risco crescente: o arquivo maior e mais numeroso primeiro (mais chance
+de deslize mecânico), depois o menor, depois a verificação cruzada.
+
+**Phase 1 — Tag `validate_front_matter_test.rb`** · covers: FR-1, FR-3, FR-8, FR-18, D-1
+
+- **Red:** n/a — não é teste-first. É rename mecânico de comentários. **Substituto:**
+  contagem-baseline antes (`bundle exec ruby -Itest test/validate_front_matter_test.rb`
+  → registrar runs/assertions/failures/errors) e regra: a mesma contagem deve valer
+  após a Fase 1. `grep -c "# @spec" test/validate_front_matter_test.rb` → **25** ao
+  fim (25 métodos taggeados; o CLI vai na Fase 1 também).
+- **Green:** inserir `# @spec <TAG>` na linha imediatamente antes de cada `def test_*`,
+  seguindo a Coverage abaixo. Um teste, uma linha, um commit não; commit único da Fase.
+- **Refactor:** conferir alinhamento coluna 1 (dois espaços + `#`), sem TABs mistos.
+- **Done when:** `bundle exec ruby -Itest test/validate_front_matter_test.rb` verde com
+  a mesma contagem do baseline; `grep -c "# @spec" test/validate_front_matter_test.rb`
+  é 25; `ruby -wc` limpo; `auditoria-de-impacto` fecha "diff só de comentários".
+- **Not test-first?** rename de comentário não tem asserção de comportamento a falhar;
+  a regressão a evitar é churn acidental de teste, capturada pelo baseline + count.
+
+**Phase 2 — Tag `site_test.rb`** · covers: FR-3, FR-4, FR-5, FR-9, FR-10, FR-12, FR-16,
+FR-17, FR-18, FR-19, AU-17 (rev 1), decisão pt-BR (D do BLOG-1)
+
+- **Red:** n/a — mesmo raciocínio da Fase 1. **Substituto:** baseline `bundle exec
+  ruby -Itest test/site_test.rb` (**precisa de `_site/` gerado antes** — usar
+  `tools/check.sh` que builda; skip se não; ver Watch out do task.md). Regra: 22 runs,
+  mesma contagem de assertions pré e pós.
+- **Green:** inserir `# @spec <TAG>` conforme Coverage. Testes de "invariante de
+  decisão" (D-N/AU-N) usam a tag correspondente sem inventar FR.
+- **Refactor:** idem Fase 1.
+- **Done when:** `docker compose run --rm site bash tools/check.sh` verde;
+  `grep -c "# @spec" test/site_test.rb` é 22; `ruby -wc` limpo; `auditoria-de-impacto`
+  fecha "diff só de comentários".
+- **Not test-first?** mesmo motivo da Fase 1.
+
+**Phase 3 — Verificação cruzada Coverage ↔ testes** · covers: garantia de rastreabilidade
+
+- **Red:** n/a. **Substituto:** dois greps produzem números concretos que precisam
+  bater com a Coverage abaixo:
+  - `grep -n "# @spec" test/*.rb` — cada linha aparece **exatamente uma vez** na
+    Coverage como origem de teste.
+  - Cada AC listado como "testado" na Coverage aparece **em pelo menos uma linha**
+    dos greps acima.
+- **Green:** ajustar tags no código (não a Coverage) se o cross-check falhar, e
+  registrar deviation em task.md quando fizer sentido. Se a Coverage estiver errada,
+  isso é **plan-affecting** e vira Amendment ou CR — não silenciar corrigindo a
+  Coverage sem trilha.
+- **Refactor:** nenhum.
+- **Done when:** os dois greps casam com a Coverage; `tools/check.sh` continua verde.
+- **Not test-first?** verificação estrutural do trabalho das Fases 1 e 2, não código
+  novo.
+
+### Coverage
+
+Convenção da coluna **Test / check**: `arquivo:linha` do `def test_*` quando testado; caso
+contrário, motivo explícito (BLOG-2 Verification externa · manual/editorial · Fase 2 ·
+propriedade do modelo). "vfm_test.rb" abrevia `test/validate_front_matter_test.rb`;
+"site_test.rb" fica como está.
+
+| Item | Phase | Test / check |
+|---|---|---|
+| AC-1.1 (title ausente/vazio) | 1 | vfm_test.rb:27 (`test_title_ausente`), vfm_test.rb:33 (`test_title_vazio`) |
+| AC-1.2 (date ausente em `_posts/`) | 1 | vfm_test.rb:39 (`test_date_ausente_em_posts`) |
+| AC-1.3 (filename sem prefixo AAAA-MM-DD-) | 1 | vfm_test.rb:51 (`test_arquivo_em_posts_sem_prefixo_de_data`) |
+| AC-1.4 (categories ausente/vazio/≥2 itens) | 1 | vfm_test.rb:56, 62, 68 |
+| AC-1.5 (categoria fora da lista fixa) | 1 | vfm_test.rb:74 (`test_categories_fora_da_lista_fixa`) |
+| AC-1.6 (tags ausente/vazia) | 1 | vfm_test.rb:80 (`test_tags_ausente`), vfm_test.rb:86 (`test_tags_vazia`), vfm_test.rb:104 (não-string, auditoria-de-impacto) |
+| AC-1.7 (tag maiúscula/acento) | 1 | vfm_test.rb:92 (`test_tag_com_maiuscula`), vfm_test.rb:98 (`test_tag_com_acento`) |
+| AC-1.8 (draft sem date aceito) | 1 | vfm_test.rb:45 (`test_date_ausente_em_drafts_eh_aceito`) |
+| AC-2.1 (drafts fora de `_site/`) | — | propriedade nativa do Jekyll (`--drafts` off por padrão); indiretamente confirmada por site_test.rb:66 (`test_diretorio_draft_nao_publicado`) checar `_site/draft` |
+| AC-2.2 (published: false) | — | propriedade nativa do Jekyll; sem teste dedicado (aceito) |
+| AC-2.3 (date futuro / `future: false`) | — | propriedade nativa do Jekyll com `timezone: America/Sao_Paulo`; sem teste (aceito) |
+| AC-3.1 (project sem repo) | 1 | vfm_test.rb:119 (`test_project_true_sem_repo`) |
+| AC-3.2 (repo fora do formato github) | 1 | vfm_test.rb:125 (`test_repo_fora_do_formato_github`), vfm_test.rb:110 (não-string, auditoria-de-impacto) |
+| AC-3.3 (layout != project-post) | 1 | vfm_test.rb:134 (`test_project_true_sem_layout_project_post`) |
+| AC-3.4 (HTML tem link do repo) | 2 | site_test.rb:78 (`test_post_de_projeto_tem_link_do_repositorio`); negativo em site_test.rb:86 (`test_post_comum_nao_tem_bloco_de_repositorio`) |
+| AC-4.1 (tempo de leitura visível) | 2 | site_test.rb:123 (`test_tempo_de_leitura_visivel_no_post`) |
+| AC-5.1 (asset local existe) | 2 | site_test.rb:135 (`test_imagem_do_post_e_servida_e_referenciada`) |
+| AC-5.2 (htmlproofer reprova ref quebrada) | — | gate `tools/test.sh` (parte do `check.sh`); sem teste minitest dedicado — invariante do htmlproofer, garantido pelo próprio gate falhando quando quebrado |
+| AC-6.1 (workflow dispara) | — | BLOG-2 Fase técnica passo 5 (Verification externa registrada em task.md) |
+| AC-6.2 (paths-ignore não dispara) | — | BLOG-2 Fase técnica passo 5 |
+| AC-7.1 (histórico via git) | — | propriedade do modelo (explícito no spec); verify por inspeção `git log` durante BLOG-2 Verification externa |
+| AC-8.1 (last_modified_at em ≥ 2 commits) | — | BLOG-2 Fase técnica passo 5 (exige `fetch-depth: 0` + 2 commits reais) |
+| AC-8.2 (last_modified_at em 1 commit) | — | BLOG-2 Fase técnica passo 5 |
+| AC-8.3 (checkout raso quebra) | — | armadilha documentada (explícito no spec: sem teste automatizado) |
+| **Invariante FR-8** (validador rejeita `last_modified_at` escrito à mão) | 1 | vfm_test.rb:143 (`test_last_modified_at_escrito_a_mao`) — complementa AC-8.x |
+| AC-9.1 (home ordem cronológica decrescente) | 2 | site_test.rb:91 (`test_home_lista_posts_em_ordem_cronologica_decrescente`); nota D-8: verificação por vacuidade no site publicado enquanto `_posts/` tem 1 real, robusta no gate por symlinks de fixture |
+| AC-10.1 (categorias) | 2 | site_test.rb:103 (`test_categorias_tem_pagina_por_categoria`) |
+| AC-10.2 (tags) | 2 | site_test.rb:117 (`test_tags_tem_pagina_por_tag_usada`) |
+| AC-11.1 (CATEGORIES constante única) | 1 | coberto por propriedade via vfm_test.rb:74 (rejeita Culinária) + vfm_test.rb:23 (`test_valid_post_has_no_errors` aceita Desenvolvimento) — a constante existe em `tools/validate-front-matter.rb:8` e não é duplicada em outros arquivos; assertion direta sobre a constante seria tautológica |
+| AC-12.1 (a) GitHub | 2 | site_test.rb:44 (`test_home_tem_link_github`) |
+| AC-12.1 (b) LinkedIn | 2 | site_test.rb:48 (`test_home_tem_link_linkedin`) |
+| AC-12.1 (c) e-mail | 2 | site_test.rb:52 (`test_home_tem_link_email`) |
+| AC-13.1 (template de projeto em `_drafts/`) | — | validador roda contra `_drafts/template-projeto.md` no `check.sh` (existe hoje; passar valida front matter); sem teste minitest dedicado — cobertura é o próprio gate falhando se o template regredir |
+| AC-13.2 (5 seções — revisão editorial) | — | manual/editorial (explícito no spec; AU-32) |
+| AC-14.1 (público sem auth) | — | BLOG-2 Verification externa |
+| AC-15.1 (giscus) | — | Fase 2 (FR-15 marcado como Fase 2 no spec) |
+| AC-16.1 (search.json existe) | 2 | site_test.rb:143 (`test_indice_de_busca_lista_os_tres_posts_ficticios`) |
+| AC-16.2 (UI de busca) | — | manual/visual (AU-32) |
+| AC-17.1 (sitemap.xml) | 2 | site_test.rb:36 (`test_sitemap_existe`) |
+| AC-17.2 (robots.txt) | 2 | site_test.rb:40 (`test_robots_txt_existe`) |
+| AC-18.1 (`noindex: true` → meta robots presente) | 2 | site_test.rb:29 (`test_home_tem_meta_robots_noindex`); complementado por vfm_test.rb:160/166 (guard `[RASCUNHO]` × `site.noindex`) na Fase 1 |
+| AC-18.2 (`noindex: false` → meta ausente) | — | BLOG-2 Fase de conteúdo passo 2 (pós-flip, gated no D-11) |
+| AC-18.3 (≥ 10 posts reais + repos 200) | — | operacional (contador shell + `curl`), BLOG-2 Fase de conteúdo pré-flip |
+| AC-19.1 (Rouge) | 2 | site_test.rb:128 (`test_post_tecnico_tem_highlight_e_mermaid`) |
+| AC-19.2 (Mermaid em layout post) | 2 | site_test.rb:128 (mesmo teste, asserção `language-mermaid`) |
+| AC-19.3 (Mermaid em `project-post`) | — | garantido por D-4 (sombreamento `_includes/js-selector.html`, `4083351`); sem teste dedicado — nenhum post `project-post` com Mermaid existe hoje; verificação por inspeção pós-BLOG-2 quando post real com essa combinação for publicado |
+| AC-20.1 (preview local ≡ CI) | — | manual/visual (AU-32) |
+| **Config pt-BR (`_config.yml`)** | 2 | site_test.rb:25 (`test_home_declara_lang_pt_br`) — decisão de idioma do BLOG-1 |
+| **Exclude do `_config.yml`** (test, draft, docs, compose.yaml não publicam) | 2 | site_test.rb:62, 66, 70, 74 (4 testes de `_diretorio_*_nao_publicado`) |
+| **AU-17 (rev 1) categoria de 1 nível** | 2 | site_test.rb:110 (`test_categoria_de_um_nivel_nao_gera_arvore_quebrada`) |
+| **Suporte a FR-12 (página `/about/`)** | 2 | site_test.rb:58 (`test_pagina_sobre_existe`) |
+| **Contrato CLI do validador (FR-1)** | 1 | vfm_test.rb:183 (`test_cli_exit_0_em_fixture_valida`), vfm_test.rb:188 (`test_cli_exit_1_em_fixture_invalida`) |
+| **Baseline positivo (FR-1)** | 1 | vfm_test.rb:23 (`test_valid_post_has_no_errors`) — sanidade das regras, cobre FR-1 no todo |
+| **YAML/front matter parsing (FR-1)** | 1 | vfm_test.rb:149 (`test_arquivo_sem_front_matter`), vfm_test.rb:154 (`test_yaml_invalido`) |
+
+**Nenhum AC sem destino** — todos os 41 ACs têm ou teste automatizado, ou destino
+explícito não-testado com motivo aceito pelo spec (BLOG-2 Verification externa, manual
+editorial por AU-32, Fase 2, propriedade nativa do Jekyll, ou propriedade do modelo).
+Nenhum gap → nenhum CR.
+
+### Rollout & rollback
+
+N/A — spec rev 4 não requer `## Migration & rollout` (não há migração de dado; a
+mudança é 100% em comentários de teste). Rollback = `git revert <sha do commit
+único>`. Feature flag n/a. Sem coordenação com deploy: BLOG-3 não muda o site
+publicado e o gate `check.sh` continua verde antes e depois.
+
+### Deferred
+
+- **BLOG-2 Fase técnica** (D-2 reescrever `site_test.rb` para invariantes; D-3 tirar
+  `[RASCUNHO]` das fixtures; D-5 Verification externa pré-flip; D-6 `etl-prf-data`
+  público; D-7 Pages Source; D-10 superseded do Step 6): plan próprio depois de
+  BLOG-3 fechar. Quando D-2 reescrever `site_test.rb`, as tags aplicadas nesta issue
+  são reaproveitadas na reescrita (asserção muda; a tag do AC que ela cobre não).
+- **BLOG-2 Fase de conteúdo** (flip do `noindex` + Verification pós-flip): gated no
+  marco D-11 (≥ 10 posts reais); registrado como "em espera", não em atraso.
+- **Automação da matriz Coverage → validation.md** (ssd-verify vai consumir esta
+  matriz manualmente na primeira passada): se o custo de re-sincronizar após BLOG-2
+  reescrever `site_test.rb` for alto, avaliar script `tools/coverage-matrix.rb` numa
+  issue própria de infraestrutura de testes; sem gatilho hoje.
+
+### Spec gaps
+
+Nenhum. Spec rev 4 aprovada em `## Approvals` (autor, 2026-09-29), 41 ACs com destino,
+matriz Coverage completa. `## Audit — rev 4` fechado com zero itens open.
+
+**Nota de tamanho do arquivo:** com esta seção, `plan.md` cruza a marca de ~250 linhas.
+Contract do ssd-plan diz que a compactação (mover detalhe de plan finalizado para
+`task.md` Execution Log e deixar pointer aqui) é responsabilidade do ssd-task no
+próximo pass. Registrado para ssd-task tratar ao decompor BLOG-3 ou ao abrir plan de
+BLOG-2.
