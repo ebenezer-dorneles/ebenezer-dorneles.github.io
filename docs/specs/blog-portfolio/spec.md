@@ -2,7 +2,7 @@
 issues: [BLOG-1, BLOG-2]
 status: in-progress
 phase: approved
-spec-revision: 3
+spec-revision: 4
 tier: M
 ---
 
@@ -26,6 +26,14 @@ qualquer banco de dados.
 
 <!--
 Numeração estável — o restante do documento referencia estas regras por número.
+
+**LEGADO (a partir da rev 4).** Esta seção é o registro histórico das regras
+originais do BLOG-1. A forma canônica atual está em `## Requirements` abaixo
+(UC-1..UC-13, FR-1..FR-20, com AC-n verificáveis). A tabela de mapeamento
+`regra ↔ FR/AC` está em `## Requirements → ### Mapeamento das regras 1–15`.
+Decisões futuras devem citar `FR-n`/`AC-n.m`, não `regra N`. Decisões
+narrativas do BLOG-1 abaixo (em `## Decisions`) conservam a numeração
+original como parte do registro imutável.
 -->
 
 **Conteúdo e estrutura**
@@ -68,6 +76,340 @@ Numeração estável — o restante do documento referencia estas regras por nú
 14. Todo o conteúdo publicado é público e de leitura livre, sem autenticação.
 15. Comentários, se habilitados, usam serviço de terceiros autenticado via GitHub
     (giscus), sem sistema de contas próprio.
+
+---
+
+## Requirements
+
+Introduzida na revisão 4 (por AU-24/D-12 do rev 2). Modernização retroativa das
+regras 1–15 em `UC-n` (casos de uso), `FR-n` (requisitos funcionais) e `AC-n.m`
+(critérios de aceitação verificáveis). A partir daqui, decisões e testes citam
+FR/AC diretamente. `## Regras de negócio` continua como referência histórica —
+ver `### Mapeamento das regras 1–15` no fim desta seção.
+
+Escopo desta seção: **conteúdo, publicação, navegação, identidade, acesso e
+indexação** — tudo que o BLOG-1/BLOG-2 tocam. NFR / Constraints & dependencies
+/ Interfaces / requests permanecem como dívida legada aceita (AU-25).
+
+### Actors
+
+- **Autor** — pessoa única (Ebenézer Dorneles) que escreve, revisa e publica.
+  Toca o repositório Git e o `bundle exec jekyll serve` local.
+- **Leitor** — visitante deslogado que consome via web. Sem autenticação; sem
+  conta.
+- **Buscador** — bot de rastreio (Google, Bing, DuckDuckGo). Age
+  independentemente da vontade do autor; o único mecanismo de controle é a
+  meta `robots` (FR-18) e o `sitemap.xml` (FR-17).
+
+### Use case coverage
+
+| UC | Descrição | Fase | Motivo | FRs |
+|----|-----------|------|--------|-----|
+| UC-1 | Autor cria e publica um post (fluxo padrão) | MVP | Núcleo do blog | FR-1, FR-2, FR-6, FR-7 |
+| UC-2 | Autor publica post sobre um projeto | MVP | Objetivo declarado (portfólio) | FR-3, FR-13 |
+| UC-3 | Autor atualiza um post publicado | MVP | Cotidiano; hook do starter já resolve | FR-8 |
+| UC-4 | Autor adiciona imagens/diagramas a um post | MVP | Regra 5 + itens do MVP | FR-5, FR-19 |
+| UC-5 | Autor previsualiza localmente antes de publicar | MVP | Item explícito do MVP | FR-20 |
+| UC-6 | Leitor abre a home | MVP | Núcleo do blog | FR-9, FR-14 |
+| UC-7 | Leitor navega por categoria | MVP | Regras 10/11 | FR-10, FR-11 |
+| UC-8 | Leitor navega por tag | MVP | Regra 10 | FR-10 |
+| UC-9 | Leitor busca conteúdo | MVP | Item MVP explícito | FR-16 |
+| UC-10 | Leitor lê um post | MVP | Núcleo do blog | FR-4, FR-14, FR-19 |
+| UC-11 | Leitor identifica autor e vias de contato | MVP | Regra 12 | FR-12 |
+| UC-12 | Leitor comenta num post | Later (fase 2) | Depende de repo público + tráfego | FR-15 |
+| UC-13 | Buscador rastreia e indexa o site | Split | MVP com `noindex: true` (FR-18 restringe); Fase de conteúdo BLOG-2 libera (D-1/D-11) | FR-17, FR-18 |
+
+Nenhum UC caiu como *dropped*; UC-12 é o único *later*. Fase técnica do BLOG-2
+não introduz UC novo — apenas satisfaz UC-13 no seu estado com `noindex: true`.
+
+### Functional requirements
+
+#### FR-1 — Front matter obrigatório em posts publicáveis
+
+Toda entrada em `_posts/` deve ter, no front matter YAML: `title` não-vazio,
+`date` válida, `categories` com exatamente 1 item pertencente ao conjunto fixo
+`{Ciência de Dados, Desenvolvimento}`, `tags` como lista com ≥ 1 item onde cada
+item é string minúscula sem acento. Rascunhos em `_drafts/` podem omitir
+`date`. O validador (`tools/validate-front-matter.rb`) reprova o build no CI e
+no gate local (`tools/check.sh`) em qualquer violação.
+
+- **AC-1.1** — Given post em `_posts/` sem chave `title` ou com `title: ""`,
+  When `bundle exec ruby tools/validate-front-matter.rb`, Then exit code != 0
+  e stdout contém `<caminho>: title: ausente` ou `<caminho>: title: vazio`.
+- **AC-1.2** — Given post em `_posts/` sem chave `date`, When validador, Then
+  exit != 0 e stdout contém `<caminho>: date: ausente`.
+- **AC-1.3** — Given post em `_posts/<AAAA-MM-DD-slug>.md` cujo prefixo do
+  filename não bate `AAAA-MM-DD-`, When validador, Then exit != 0 e mensagem
+  aponta o filename inválido (Jekyll ignora esses arquivos em silêncio; o
+  validador não).
+- **AC-1.4** — Given post com `categories` ausente, `categories: []` ou
+  `categories` com ≥ 2 itens, When validador, Then exit != 0.
+- **AC-1.5** — Given post com `categories: [X]` onde X ∉ `{Ciência de Dados,
+  Desenvolvimento}`, When validador, Then exit != 0 (constante única em
+  `FrontMatterValidator::CATEGORIES`).
+- **AC-1.6** — Given post com `tags` ausente ou `tags: []`, When validador,
+  Then exit != 0.
+- **AC-1.7** — Given post com `tags: [X]` onde X contém maiúscula ou acento,
+  When validador, Then exit != 0.
+- **AC-1.8** — Given post em `_drafts/` sem `date`, When validador, Then
+  exit == 0 (drafts não precisam de data).
+
+#### FR-2 — Visibilidade condicional de posts
+
+Um post é publicamente visível **somente quando** vive em `_posts/`, tem
+`published: true` (default) e sua `date` é ≤ "agora" no fuso do site
+(`America/Sao_Paulo`, D-15 do BLOG-1). Nenhum post fora dessas condições
+aparece em `_site/`.
+
+- **AC-2.1** — Given arquivo em `_drafts/`, When `jekyll build` (sem
+  `--drafts`), Then não gera página em `_site/`.
+- **AC-2.2** — Given post em `_posts/` com `published: false`, When build,
+  Then não gera página em `_site/`.
+- **AC-2.3** — Given post em `_posts/` com `date` no futuro relativo a
+  `America/Sao_Paulo`, When build (config default `future: false`), Then não
+  gera página em `_site/`.
+
+#### FR-3 — Post-de-projeto expõe link do repositório
+
+Post declarado como projeto (`project: true`) exige `repo` válido e `layout:
+project-post`; o HTML publicado contém o link do repositório em posição fixa
+(bloco antes do `{{ content }}`).
+
+- **AC-3.1** — Given post com `project: true` e sem `repo`, When validador,
+  Then exit != 0.
+- **AC-3.2** — Given `project: true` e `repo` que não bate
+  `https://github.com/<owner>/<repo>`, When validador, Then exit != 0.
+- **AC-3.3** — Given `project: true` e `layout` != `project-post`, When
+  validador, Then exit != 0.
+- **AC-3.4** — Given post `project: true` renderizado, When leitor abre a URL,
+  Then o HTML contém `<a href="{{ page.repo }}"` no bloco do layout
+  `project-post`, antes do corpo do post.
+
+#### FR-4 — Tempo de leitura visível no post
+
+Cada post publicado exibe uma indicação de tempo estimado de leitura calculado
+pelo tema (Chirpy `read_time` include).
+
+- **AC-4.1** — Given post publicado com ≥ 100 palavras, When leitor abre a URL,
+  Then o HTML contém elemento com classe/ícone de tempo de leitura do tema
+  (`.post-meta` com string tipo "X min read").
+
+#### FR-5 — Assets versionados no próprio repositório
+
+Imagens e diagramas usados por posts vivem em `assets/img/posts/<slug>/`.
+Nenhuma dependência de hospedagem externa para conteúdo próprio. O
+`htmlproofer` (gate) reprova referência a imagem inexistente.
+
+- **AC-5.1** — Given post que declara `image.path: foo.png` com `media_subpath:
+  /assets/img/posts/<slug>/`, Then o arquivo `assets/img/posts/<slug>/foo.png`
+  existe no repositório.
+- **AC-5.2** — Given `_site/` construído com referência a imagem interna
+  inexistente, When `bash tools/test.sh` (htmlproofer com
+  `--disable-external`), Then exit != 0.
+
+#### FR-6 — Publicação exclusiva via git push para `main`
+
+Publicação ocorre pelo push (ou merge) para `main`; nenhum outro caminho.
+Commits que só alteram `README.md`, `.gitignore` ou `LICENSE` não disparam o
+workflow.
+
+- **AC-6.1** — Given commit em `main` que modifica arquivo do site (post,
+  layout, `_config.yml`, asset), When push, Then o workflow
+  `.github/workflows/pages-deploy.yml` dispara.
+- **AC-6.2** — Given commit em `main` que só modifica `README.md` (ou
+  `.gitignore`, ou `LICENSE`), When push, Then o workflow **não** dispara
+  (`paths-ignore` do starter).
+
+#### FR-7 — Histórico via git
+
+Todas as edições em posts (criação, alteração, remoção) ficam rastreáveis via
+`git log <arquivo>`. Nenhum mecanismo alternativo (CMS externo, banco).
+
+- **AC-7.1** — Property of the model — não requer teste; é consequência de FR-6
+  (publicação via git push para `main`). Verify confirma inspecionando um
+  post e o `git log` correspondente.
+
+#### FR-8 — `last_modified_at` automático a partir de commits
+
+Post com múltiplos commits mostra "última atualização" no HTML publicado,
+preenchida pelo hook `_plugins/posts-lastmod-hook.rb` do starter a partir do
+`git log`. Post com um único commit não mostra a seção.
+
+- **AC-8.1** — Given post com ≥ 2 commits, When build (com `fetch-depth: 0` no
+  workflow), Then o HTML publicado contém `last_modified_at` != `date` e
+  renderiza a seção "última atualização" do tema.
+- **AC-8.2** — Given post com 1 commit só, When build, Then o HTML **não**
+  contém a seção "última atualização" (hook detecta `last_modified_at ==
+  date`).
+- **AC-8.3** — Given workflow com `fetch-depth: 0` mudado para checkout raso,
+  When build, Then o hook falha silenciosamente e AC-8.1 quebra. Documentada
+  como armadilha; sem teste automatizado por depender de mudança do workflow.
+
+#### FR-9 — Home em ordem cronológica decrescente
+
+A página inicial (`/`) lista os posts publicados em ordem decrescente por
+`date`.
+
+- **AC-9.1** — Given N ≥ 2 posts publicados com datas distintas, When leitor
+  abre `/`, Then a ordem no HTML respeita `date_i > date_{i+1}`. Verificado no
+  `test/site_test.rb` (invariante estrutural — D-2/D-8).
+
+#### FR-10 — Página própria por categoria e por tag
+
+Cada categoria em uso e cada tag em uso ganha uma página listando os posts
+associados.
+
+- **AC-10.1** — Given post com `categories: [X]`, When build, Then
+  `_site/categories/<slug(X)>/index.html` existe e lista o post.
+- **AC-10.2** — Given post com `tags: [Y]`, When build, Then
+  `_site/tags/<slug(Y)>/index.html` existe e lista o post.
+
+#### FR-11 — Conjunto fixo de categorias
+
+O conjunto de categorias válidas é `{Ciência de Dados, Desenvolvimento}` e não
+pode ser alterado sem revisão de spec. Tags são livres. Corolário do FR-1
+AC-1.5 mais o constraint sobre o conjunto.
+
+- **AC-11.1** — Given `tools/validate-front-matter.rb`, Then
+  `FrontMatterValidator::CATEGORIES` == `["Ciência de Dados", "Desenvolvimento"]`
+  (constante única, sem duplicação em outros arquivos).
+
+#### FR-12 — Links de contato visíveis em todas as páginas
+
+Toda página do site publicado contém, em cabeçalho ou rodapé, links para:
+GitHub do autor, LinkedIn do autor, e e-mail (mailto).
+
+- **AC-12.1** — Given qualquer URL do site publicado (home, post, categoria,
+  tag, about), When leitor abre, Then o HTML contém:
+    (a) `href="https://github.com/ebenezer-dorneles"` (ou `https://github.com/ebenezer-dorneles/*`);
+    (b) `href="https://www.linkedin.com/in/ebedorneles/"` (ou perfil equivalente);
+    (c) `href="mailto:ebenezerdorneles@gmail.com"`.
+  Confirmado pelo `test/site_test.rb` para a home.
+
+#### FR-13 — Template mínimo de post-de-projeto
+
+Post-de-projeto (`project: true`) segue estrutura mínima sugerida com 5 seções:
+contexto, stack técnica, processo, resultado, aprendizados. É **diretriz
+editorial**, não é validada por script.
+
+- **AC-13.1** — Given autor criando um novo post-de-projeto, Then existe
+  `_drafts/template-projeto.md` com as 5 seções em headings `##` e front matter
+  que passa no validador.
+- **AC-13.2** — Given post publicado com `project: true`, When revisão humana,
+  Then presença/ausência das 5 seções é observada — não bloqueia CI.
+
+#### FR-14 — Acesso público sem autenticação
+
+Todo conteúdo publicado é acessível sem login. Nenhum redirect para tela de
+autenticação em nenhuma URL do site.
+
+- **AC-14.1** — Given URL qualquer do site publicado, When leitor deslogado
+  faz GET, Then resposta é `200 OK` (ou `301/302` só para redirect de
+  trailing slash), nunca `401/403` nem redirect para login.
+
+#### FR-15 — Comentários via giscus (fase 2)
+
+Fase 2. Comentários, quando habilitados, usam giscus (autenticação por GitHub
+OAuth). Sem sistema de contas próprio.
+
+- **AC-15.1** — Fase 2. Given `_config.yml` com `comments.provider: giscus` e
+  `comments.giscus.repo/repo_id/category/category_id` preenchidos, When post
+  publicado, Then o widget do giscus aparece no fim do post e usa GitHub OAuth
+  para postagem.
+
+#### FR-16 — Busca client-side embutida
+
+Site oferece busca sobre o conteúdo dos posts publicados, sem servidor de
+busca externo.
+
+- **AC-16.1** — Given site publicado com ≥ 1 post, Then
+  `assets/js/data/search.json` existe com uma entrada por post contendo
+  `title`, `url`, `categories`, `tags`, `date`, `content`.
+- **AC-16.2** — Given leitor digita no campo de busca do tema, Then os posts
+  que casam por título/conteúdo aparecem em resultados (verificado
+  visualmente; automação da UI fora de escopo).
+
+#### FR-17 — Sitemap e robots.txt disponíveis
+
+Site publica `sitemap.xml` e `robots.txt` acessíveis no root, gerados pelos
+plugins `jekyll-sitemap` do gem.
+
+- **AC-17.1** — Given site publicado, When `GET https://<host>/sitemap.xml`,
+  Then `200 OK` com XML listando todos os posts publicados.
+- **AC-17.2** — Given site publicado, When `GET https://<host>/robots.txt`,
+  Then `200 OK`.
+
+#### FR-18 — `noindex` gated no marco de conteúdo (D-1, D-11)
+
+O site emite meta `robots` `noindex, nofollow` em todas as páginas enquanto a
+chave `noindex: true` estiver ativa em `_config.yml`. A troca para
+`noindex: false` (Etapa B do D-1) só ocorre com ≥ 10 posts reais publicados
+(D-11) — "real" = sem `[RASCUNHO]` no `title` **e** (se `project: true`)
+`repo` responde HTTP 200 para leitor deslogado.
+
+- **AC-18.1** — Given `_config.yml` com `noindex: true`, When leitor abre
+  qualquer URL do site, Then o HTML `<head>` contém `<meta name="robots"
+  content="noindex, nofollow">` (emitido por `_includes/metadata-hook.html`
+  — sombreamento autorizado).
+- **AC-18.2** — Given `_config.yml` com `noindex: false` (ou chave removida),
+  When leitor abre qualquer URL, Then a meta `robots noindex` **não** está
+  presente.
+- **AC-18.3** — Given `_posts/` contém ≥ 10 arquivos `.md` sem `[RASCUNHO]`
+  no `title`, e cada um com `project: true` tem `repo` que responde 200,
+  When autor decide flipar, Then a condição do D-11 está satisfeita e
+  `noindex: false` pode ser aplicado. Verificado pelo contador
+  `count=$(grep -rL '\[RASCUNHO\]' _posts/ | wc -l); [ "$count" -ge 10 ]`
+  mais checagem manual/scriptada dos `repo` HTTP 200 (Fase de conteúdo passo 2).
+
+#### FR-19 — Realce de sintaxe e Mermaid renderizados
+
+Posts que usam blocos de código têm realce Rouge; posts com `mermaid: true` no
+front matter renderizam diagramas Mermaid. Vale para `layout: post` e para
+`layout: project-post` (sombreamento de `_includes/js-selector.html` por D-4).
+
+- **AC-19.1** — Given post com fenced code block em qualquer linguagem, Then o
+  HTML publicado contém `<div class="highlight">` ou `<pre class="highlight">`
+  gerado pelo Rouge.
+- **AC-19.2** — Given post com `mermaid: true` e bloco Mermaid, When leitor
+  abre a URL, Then o navegador carrega `mermaid.min.js` e o diagrama renderiza
+  como SVG.
+- **AC-19.3** — Given post com `layout: project-post` e `mermaid: true` +
+  bloco Mermaid, When leitor abre, Then o comportamento é idêntico a AC-19.2
+  (garantido pelo sombreamento de `_includes/js-selector.html`, D-4/`4083351`).
+
+#### FR-20 — Preview local reproduz o build de produção
+
+Autor pode rodar o site localmente e ver o mesmo output que o CI produz.
+
+- **AC-20.1** — Given repositório com `Gemfile.lock` versionado, When autor
+  roda `docker compose run --rm --service-ports site bash tools/run.sh -H
+  0.0.0.0` (Ruby 3.4 no container, mesma versão do runner do Actions), Then
+  `http://localhost:4000` responde 200 com o mesmo layout, meta tags e
+  conteúdo que o CI publica (validado por inspeção visual, não automatizado).
+
+### Mapeamento das regras 1–15
+
+| Regra | FR/AC canônico | Notas |
+|-------|----------------|-------|
+| 1 | FR-1 (AC-1.1..1.8) + FR-11 (AC-11.1) | Categorias fixas em 2 estão em AC-1.5 e FR-11. Status "rascunho vs publicado" é FR-2 (drafts) + Jekyll `published: false` (D-4 do BLOG-1). |
+| 2 | FR-2 (AC-2.1..2.3) | Visibilidade condicional; comportamento nativo Jekyll (`future: false` + timezone). |
+| 3 | FR-3 (AC-3.1..3.4) | Validador cobra `repo`/`layout`; renderização em `project-post`. |
+| 4 | FR-4 (AC-4.1) | Tema Chirpy calcula e renderiza. |
+| 5 | FR-5 (AC-5.1..5.2) + FR-19 (AC-19.2 para diagramas) | Assets versionados; htmlproofer é gate. |
+| 6 | FR-6 (AC-6.1..6.2) | `paths-ignore` no workflow. |
+| 7 | FR-7 (AC-7.1) | Propriedade do modelo; verify por inspeção. |
+| 8 | FR-8 (AC-8.1..8.3) | Hook do starter + `fetch-depth: 0`. |
+| 9 | FR-9 (AC-9.1) | Comportamento nativo Jekyll. |
+| 10 | FR-10 (AC-10.1..10.2) | `jekyll-archives` gera as páginas. |
+| 11 | FR-11 (AC-11.1) + FR-1 (AC-1.5) | Constante única no validador. |
+| 12 | FR-12 (AC-12.1) | Todas as páginas; validado por `site_test.rb`. |
+| 13 | FR-13 (AC-13.1..13.2) | AC-13.2 é diretriz editorial. |
+| 14 | FR-14 (AC-14.1) | Pages gratuito → repositório público (D do BLOG-1). |
+| 15 | FR-15 (AC-15.1) | Fase 2 (giscus). |
+
+FR-16..FR-20 são requisitos adicionais que não têm regra numerada correspondente
+mas eram itens do MVP ou consequência de decisões (D-1/D-11 para FR-18, D-4
+para FR-19).
 
 ---
 
@@ -428,7 +770,7 @@ contrato compartilhado do pipeline.
 
 - **D-8 — Invariante "home em ordem cronológica descrescente" verificado via fixtures**
   · type: technical · decided-by: agent (2026-09-29, via AU-21 do delta audit rev 2)
-  · A regra 9 exige "home em ordem cronológica decrescente". Com 1 post real
+  · FR-9 (AC-9.1) exige "home em ordem cronológica decrescente". Com 1 post real
   no `_posts/`, a asserção do site publicado é trivialmente verdadeira. Resolução:
   manter D-2 como está — a ordem é verificada no `tools/check.sh`, que roda
   com fixtures symlinkadas (`2026-01-01` + `2026-01-02` + posts reais = sempre
@@ -508,7 +850,7 @@ contrato compartilhado do pipeline.
   · Motivo: garantir que o plan de BLOG-2 — que introduz D-11 gated em
   conteúdo, testes reescritos e mudança de config sensível — seja escrito
   sobre estrutura sólida, com Coverage rastreável até FR-n/AC-n em vez do
-  proxy "regra 3", "regra 9". Reconhece o custo aceito: adiar a fase
+  proxy "regra 3", "regra 9" (agora `FR-3`, `FR-9` a partir da rev 4). Reconhece o custo aceito: adiar a fase
   técnica do BLOG-2 (repo público, Pages Source, testes migrados,
   fixtures ajustadas) por trabalho estrutural.
   · Consequência operacional: pipeline vira `spec rev 3 (edits awaiting) →
@@ -551,7 +893,7 @@ contrato compartilhado do pipeline.
        enquanto se reescreve o histórico. Restaurar público depois.
 
   **(C) O que nunca fazer:** commit "silencioso" que apaga arquivo sem
-  `git revert` visível — quebra a regra 7 (histórico rastreável) e
+  `git revert` visível — quebra o FR-7 (histórico via git) e
   esconde o incidente do próprio autor no futuro.
 
   · Motivo: sem procedimento pré-escrito, resposta a incidente é
@@ -661,7 +1003,7 @@ potencialmente distante entre elas. Ver D-1..D-13.
 - Sombreamento de `_includes/js-selector.html` (`4083351`) — ver D-4. Sem
   essa correção, mermaid, dayjs, lazy-polyfill, glightbox, clipboard e
   pageviews não carregavam em `project-post`.
-- `README.md` na raiz do repositório, com o fluxo da regra 6.
+- `README.md` na raiz do repositório, com o fluxo do FR-6 (publicação via git push).
 - `origin` configurado apontando para
   `https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io.git`.
 
@@ -733,7 +1075,7 @@ Quando o marco for atingido, o plan retoma:
 **Fora do escopo do BLOG-2 (ambas as fases, registrado, não trabalhado):**
 
 - `twitter.username` continua com placeholder do starter — Watch out do
-  task.md; não afeta regra 12; entra em fase 2 se o autor decidir publicar
+  task.md; não afeta FR-12 (links de contato); entra em fase 2 se o autor decidir publicar
   em Twitter/X.
 - Trocar os passos inline `Build site`/`Test site` do workflow por
   `bash tools/check.sh` — decisão adiada; hoje o validador só roda
@@ -742,6 +1084,43 @@ Quando o marco for atingido, o plan retoma:
   bump do Chirpy — Watch out permanente (D-4/D-9), não trabalho ativo.
 - **Modernização retroativa das regras 1–15 para UC-n/FR-n/AC-n** — vira
   **BLOG-3**, e por D-12 precede a execução do plan de BLOG-2.
+
+### BLOG-3 — Modernização retroativa das regras 1–15
+
+Introduzida na rev 4. Executa D-12: converter as 15 regras de negócio do
+BLOG-1 em `UC-n`/`FR-n`/`AC-n` com rastreabilidade `UC → FR → AC → teste`.
+
+**Já feito nesta revisão (spec-only, sem código):**
+
+- `## Requirements` com 13 UCs (UC-1..UC-13), 20 FRs (FR-1..FR-20) e ACs por
+  regra + itens do MVP + decisões D-1..D-13.
+- `### Mapeamento das regras 1–15` na tabela final de `## Requirements`,
+  documentando `regra N → FR-M(AC-M.k)` para cada uma das 15 regras.
+- `## Regras de negócio` marcada como legado no seu próprio header, com
+  ponteiro para `## Requirements`.
+- Referências a "regra N" em D-8, D-12, D-13 e no `### BLOG-2 → Fase técnica`
+  atualizadas para citar `FR-N` (D-2, D-3, D-4, D-5, D-6, D-7, D-9, D-10, D-11
+  não citavam "regra N" diretamente).
+- R-2 (Risks & assumptions) atualizado para citar `FR-13 (AC-13.2)`.
+
+**Pendente no plan de BLOG-3 (código, não spec):**
+
+- Adicionar tag `FR-n`/`AC-n.m` no nome ou docstring de cada teste em
+  `test/validate_front_matter_test.rb` e `test/site_test.rb`, para que a
+  matriz de Coverage do ssd-plan e o `validation.md` do ssd-verify possam
+  rastrear cobertura por AC. Sem mudança de comportamento; apenas naming.
+- Nova seção `## Coverage` no plan de BLOG-3 (owned pelo ssd-plan) mapeando
+  cada AC → arquivo:linha de teste que a exercita.
+
+**Fora do escopo do BLOG-3 (permanece como dívida legada aceita, AU-25):**
+
+- `## Non-functional requirements` — não introduzido.
+- `## Constraints & dependencies` — não introduzido.
+- `## Interfaces / requests` — não introduzido.
+- Modernização das Decisões narrativas do BLOG-1 (as ~20 decisões em
+  `## Decisions` antes de `### Decisions — BLOG-2 (rev 2)`) — permanecem em
+  texto narrativo original, citando "regra N" onde citam. São registro
+  imutável do BLOG-1; futuras decisões usam FR-n/AC-n.
 
 ---
 
@@ -801,7 +1180,7 @@ satisfeito, mas o resultado prático é pior do que ter deferido o flip.
 
 **Mitigador registrado (não é validação automática, é convenção editorial):**
 posts de projeto seguem o template de `_drafts/template-projeto.md` (Step 4
-do BLOG-1) com as cinco seções da regra 13 — contexto, stack técnica,
+do BLOG-1) com as cinco seções do FR-13 (AC-13.2) — contexto, stack técnica,
 processo, resultado, aprendizados. O template lembra o autor da estrutura
 mínima no momento de escrever. Fica a cargo da revisão humana; validador
 não checa presença de headings.
@@ -1008,6 +1387,80 @@ rev 4 de modernização retroativa por D-12).
 
 ---
 
+## Audit — rev 4 — 2026-09-29
+
+Delta audit da revisão 4. Escopo: verificar cobertura das regras 1–15 pelos
+FR-1..FR-20, checagem de que cada AC-n.m é verificável com valor concreto,
+consistência dos edits de "regra N" → "FR-N" em D-8/D-12/D-13/BLOG-2/R-2, e
+integridade da tabela de mapeamento.
+
+**Método:** re-leitura do `## Requirements` inteiro; tracing regra→FR e
+UC→FR→AC nos dois sentidos; `grep -n "regra [0-9]"` para confirmar que
+"regra N" só resta em conteúdo legado explicitamente marcado; teste manual
+de cada AC contra "poderia ser transformado em teste com valor concreto".
+
+**Coverage regras 1–15 → FR (confirmado):** cada uma das 15 regras aparece
+na tabela `### Mapeamento das regras 1–15` apontando para ≥ 1 FR. Regras 1,
+5 e 11 mapeiam para múltiplos FRs (intencional — semântica composta).
+Bijeção estrita **não** é requisito: regras têm semântica composta, FRs
+16–20 são acréscimos sem regra correspondente (documentado no texto).
+Cobertura completa: ✓.
+
+**Coverage UC → FR (confirmado):** todos os 13 UCs mapeiam para ≥ 1 FR na
+`### Use case coverage`. UC-12 (later) e UC-13 (split MVP + Fase de conteúdo)
+tratados explicitamente. Cobertura completa: ✓.
+
+**Coverage FR → AC (confirmado):** cada um dos 20 FRs tem ≥ 1 AC. Total ≈ 41
+ACs, com Given/When/Then legível em cada. Cobertura completa: ✓.
+
+**Edits regra→FR (confirmado):** grep sobre a spec confirma que "regra [0-9]"
+só resta em: (i) `## Regras de negócio` (marcada como legado); (ii) tabela
+`### Mapeamento das regras 1–15` (função da própria tabela); (iii) `## Data
+sources` e `## Decisions` narrativas do BLOG-1 (registro imutável, fora do
+escopo do BLOG-3 por decisão explícita); (iv) `### MVP` de `## Scope`
+(BLOG-1 escopo original, fora do escopo do BLOG-3); (v) D-12 (citação
+histórica com alias "agora `FR-3`, `FR-9`"). Nenhum leak em D-1..D-13
+modernos, BLOG-2 subsection ou Risks & assumptions. ✓.
+
+| ID | Item | Type | Severity | Resolution | Status | Decided by | Decision | Evidence |
+|----|------|------|----------|------------|--------|------------|----------|----------|
+| AU-30 | FR-6 AC-6.1 testa apenas que o workflow **dispara** ("`o workflow ... dispara`"), não que ele **conclui com sucesso**. Um workflow que falha (htmlproofer error, configure-pages error, deploy-pages error) ainda satisfaz "disparou". Sem asserção adicional, um build reprovado passaria AC-6.1. Semantica de "publicação via git push" (regra 6 / FR-6) exige sucesso, não trigger. | quality | medium | technical | resolved | agent (2026-09-29) | Composição com AC-17.1 (`sitemap.xml` responde 200 no site publicado) e AC-18.1 (`meta robots noindex` presente após deploy) cobre indiretamente a garantia de sucesso — se o build/deploy falha, essas duas asserções falham na Verification externa do BLOG-2 Fase técnica passo 5. FR-6 AC-6.1 permanece focado no gatilho como sua responsabilidade única | FR-6 no Requirements; FR-17 AC-17.1; FR-18 AC-18.1; BLOG-2 → Fase técnica → passo 5 |
+| AU-31 | Contract da skill ssd-spec lista `### Use case coverage` como conteúdo obrigatório de `## Scope`. A rev 4 coloca `### Use case coverage` sob `## Requirements`, junto de FR/AC. `## Scope` do spec não recebeu subseção equivalente. Discrepância formal de placement contra o contract. | quality | low | technical | invalid | agent (2026-09-29) | A rubrica do contract ("Scope (MVP, non-goals, use case coverage)") lista **conteúdo obrigatório**, não localização física. `### Use case coverage` existe e é canônica; sua colocação sob `## Requirements` é semanticamente coerente com o fluxo UC → FR → AC. Reader localiza via TOC sem custo. Não bloqueia downstream (Coverage do plan cita UC-n/FR-n/AC-n.m diretamente) | contract da skill; `## Requirements → ### Use case coverage` |
+| AU-32 | Vários ACs dependem de verificação runtime/manual/humana, não automatizada no CI atual: AC-13.2 (revisão editorial das 5 seções), AC-16.2 (UI de busca digitada), AC-19.2/19.3 (Mermaid renderiza no browser), AC-20.1 (preview local igual ao CI, comparação visual). Coverage do plan e matriz do verify precisarão de checklist manual. | quality | low | technical | resolved | agent (2026-09-29) | Característica aceita do MVP portfolio blog (autor único, sem infra de teste de UI). Cada AC afetado é explícito sobre o mecanismo ("manual/scriptado", "verificado visualmente", "não automatizado"). ssd-verify vai formalizar checklist manual em `validation.md` para esses ACs; automação não é requisito da spec. Registrado como característica, não defeito | AC-13.2, AC-16.2, AC-19.2, AC-19.3, AC-20.1 no `## Requirements` |
+
+**Observações da re-leitura que não viraram findings.** (i) FR-1 tem 8 ACs;
+carga alta mas cada AC é um caminho de reprovação distinto do validador —
+cobertura granular útil, não fragmentação. (ii) FR-11 tem AC-11.1 sobre uma
+constante Ruby (`CATEGORIES` no validador); tecnicamente é assertion sobre
+código-fonte, não behavior externo — aceito porque o comportamento externo
+depende dessa constante, e sua unicidade previne divergência em duas listas.
+(iii) AC-3.2 checa regex do `repo` mas não sua existência online (Decisions
+do BLOG-1 já justificam: `htmlproofer --disable-external`); complementado
+por D-6 no BLOG-2 (repo público como precondição operacional). (iv) FR-15
+AC-15.1 marcado como "Fase 2" sem AC verificável agora — apropriado, UC-12
+está como *later*. (v) FR-18 AC-18.3 mistura verificação por script
+(contador de `[RASCUNHO]`) e por curl (repo HTTP 200) — refletindo o D-11
+real, não é "hedge".
+
+**Pressão adversarial.** Tentei achar uma regra 1–15 sem cobertura de FR,
+um FR sem AC, um UC MVP sem FR mapeado, ou "regra N" leak em D-1..D-13
+pós-edit — **nada encontrado**. Tentei achar AC com wording vago tipo
+"adequado" ou "razoável" — nada encontrado; os pontos "manual/visual" são
+explícitos sobre o mecanismo, não vagos sobre o critério.
+
+**Gate de saída (rev 4).** 3 achados novos triados: 2 resolved (AU-30
+composição com FR-17/FR-18; AU-32 característica aceita do MVP) + 1 invalid
+(AU-31 placement defensível). Cumulativo desde rev 2 (AU-18..AU-32): 11
+resolved + 1 deferred (AU-24 → BLOG-3) + 3 invalid. **Zero itens open** em
+qualquer seção de audit. Exit gate da rev 4: **aberto**.
+
+Próximo passo do pipeline: **aprovação do usuário** para a revisão 4. Após
+aprovação, `phase: approved` libera `ssd-plan` para BLOG-3 (adicionar tags
+FR-n/AC-n.m em nomes de teste + `## Coverage` matrix no plan), depois plan
+de BLOG-2 Fase técnica.
+
+---
+
 ## Revisions
 
 | Rev | Data | Issue | Gatilho | Mudanças |
@@ -1015,6 +1468,7 @@ rev 4 de modernização retroativa por D-12).
 | 1 | 2026-09-17 | BLOG-1 | Marco zero (spec legada) | Corpo original + `## Audit — 2026-09-17` (17/17 fechados). |
 | 2 | 2026-09-29 | BLOG-2 | Pedido do usuário (autor, 2026-09-29) — marco de saída do MVP | Frontmatter moderno (`phase: specifying`, `spec-revision: 2`, `tier: M`, `issues: [BLOG-1, BLOG-2]`). Nova subseção `### Decisions — BLOG-2 (rev 2)` com D-1..D-5. Nova subseção `### BLOG-2 — Marco de saída do MVP` em `## Scope`. Nova `## Approvals`. Reconhece commits `686c5c0`, `4083351` e `6b16713` como execução parcial do marco de saída. |
 | 3 | 2026-09-29 | BLOG-2 | Absorve AU-20 (D-11) e AU-25 do delta audit rev 2 | Edit em D-1 Etapa B (agora cita D-11 como precondição de ≥ 10 posts reais; alternativa de N ≥ 2 supersedida). Rewrite de `### BLOG-2 — Marco de saída do MVP` em `## Scope` (dividida em **Fase técnica** executável agora e **Fase de conteúdo** gated no marco). Nova seção `## Risks & assumptions` com R-1 (cache irreversível), R-2 (disciplina editorial dos 10 posts), R-3 (drift do tema em bumps do Chirpy). |
+| 4 | 2026-09-29 | BLOG-3 | Nova issue — modernização retroativa (D-12) | Frontmatter `phase: specifying`, `spec-revision: 4`. Nova seção `## Requirements` com Actors (Autor/Leitor/Buscador), Use case coverage (UC-1..UC-13, 12 MVP + 1 later), FR-1..FR-20 com AC-n.m verificáveis, e `### Mapeamento das regras 1–15`. `## Regras de negócio` marcada como legado (referência histórica). Referências a "regra N" em D-8, D-12, D-13, BLOG-2 Fase técnica, BLOG-2 Fora do escopo e R-2 atualizadas para `FR-N` (ou `FR-N (AC-N.M)`). Nova subseção `### BLOG-3 — Modernização retroativa das regras 1–15` em `## Scope`. NFR/Constraints/Interfaces seguem dívida aceita (AU-25). |
 
 ---
 
@@ -1025,3 +1479,4 @@ rev 4 de modernização retroativa por D-12).
 | 1 | 2026-09-17 | — | Aprovação implícita — spec legada, não passou por `ssd-audit` formal. A auditoria de conteúdo em `## Audit — 2026-09-17` fechou 17/17 achados, e as etapas 0–5 do plan foram executadas sob essa base. |
 | 2 | — | — | Não aprovada isoladamente. Delta audit rev 2 encontrou 2 open items awaiting spec edit (AU-20/D-11 e AU-25); ambos absorvidos na rev 3, que subsume rev 2 para efeito de aprovação. |
 | 3 | 2026-09-29 | autor (Ebenézer Dorneles) | Aprovada explicitamente após `## Audit — rev 3 — 2026-09-29` fechar com zero open items. Habilita `BLOG-3` (modernização retroativa UC/FR/AC por D-12) como próximo passo do pipeline, seguido de `plan` de BLOG-2. |
+| 4 | 2026-09-29 | autor (Ebenézer Dorneles) | Aprovada explicitamente após `## Audit — rev 4 — 2026-09-29` fechar com zero open items (11 resolved + 1 deferred + 3 invalid cumulativos desde rev 2). Habilita `ssd-plan` para BLOG-3 (tags FR-n/AC-n.m em nomes de teste + matriz `## Coverage` no plan), depois plan de BLOG-2 Fase técnica. |
