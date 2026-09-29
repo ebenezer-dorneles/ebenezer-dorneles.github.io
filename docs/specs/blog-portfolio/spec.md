@@ -1,6 +1,9 @@
 ---
-issues: [BLOG-1]
+issues: [BLOG-1, BLOG-2]
 status: in-progress
+phase: approved
+spec-revision: 3
+tier: M
 ---
 
 # Blog de portfólio (Ciência de Dados & Dev)
@@ -276,6 +279,290 @@ Limitações que o validador **não** cobre, e que ficam por conta da revisão h
   Umami, Matomo, Cloudflare e Fathom. Se analytics entrar na fase 2, a escolha natural é
   GoatCounter ou Cloudflare (gratuitos e leves); Plausible exigiria sobrescrever o `head`.
 
+### Decisions — BLOG-2 (rev 2)
+
+<!--
+Primeiras decisões numeradas da spec (`D-n`). As decisões narrativas acima
+seguem como registro histórico do BLOG-1; novas decisões passam a usar o
+contrato compartilhado do pipeline.
+-->
+
+- **D-1 — Marco de saída executado em duas etapas independentes**
+  · type: product · decided-by: user (autor, 2026-09-29, via pedido de revisão)
+  · **Etapa A** (feita antes desta revisão): remover os três posts fictícios
+  (`686c5c0`) e publicar pelo menos um post real sem prefixo `[RASCUNHO]`
+  (`6b16713` — post ETL/PRF). **Etapa B** (gated em conteúdo — ver D-11):
+  trocar `noindex: true` para `noindex: false` no `_config.yml`, **somente
+  quando o marco de ≥ 10 posts reais publicados for atingido**. D-11 define
+  o contador exato, o critério de "post real" e o comando de verificação.
+  · Motivo: publicar sem conteúdo real quebra o objetivo declarado; separar
+  as etapas permite validar o site com conteúdo real **antes** de expor à
+  indexação, que é irreversível na prática (cache de buscador sobrevive à
+  reversão do commit — ver `## Risks & assumptions` → R-1).
+  · Alternativas rejeitadas: fazer as duas mudanças no mesmo commit (não
+  permite janela de validação com conteúdo real); ~~esperar N ≥ 2 posts reais
+  para tirar o `noindex`~~ — superseded por **D-11** (contador concreto de 10,
+  com critério de "post real" fechado).
+  · Evidência: `git log --oneline`; estado atual de `_posts/` e de `_config.yml`.
+
+- **D-2 — `test/site_test.rb` migra para invariantes estruturais**
+  · type: technical · decided-by: agent
+  · Substituir asserções por slug fictício (`analise-exploratoria-vendas`,
+  `api-tarefas-ruby`, `visualizando-pipelines`) por invariantes: (a) a home
+  contém ≥ 1 post, ordenados por data decrescente; (b) para cada categoria
+  usada por algum post em `_site/`, existe página `/categories/<slug>/`
+  correspondente; idem para tags; (c) o índice de busca
+  (`assets/js/data/search.json`) contém uma entrada por post real; (d) as
+  asserções específicas de Rouge, Mermaid e imagem passam a rodar contra o
+  primeiro post que declara cada capacidade — hoje o post ETL/PRF satisfaz
+  os três.
+  · Motivo: fixar slugs de conteúdo torna a suíte frágil a cada publicação
+  ou remoção de post; a suíte reprova hoje porque os slugs dos três fictícios
+  foram removidos.
+  · Alternativas rejeitadas: atualizar as asserções com os slugs reais a
+  cada publicação (mesma fragilidade, custo recorrente indefinido); marcar
+  os testes com `skip` (esconde regressão, não a resolve).
+  · Evidência: gate atual — `docker compose run --rm site bash tools/check.sh`
+  → 6 falhas em `site_test.rb` por slugs ausentes.
+
+- **D-3 — Fixtures em `test/fixtures/site_posts/` deixam de usar prefixo `[RASCUNHO]`**
+  · type: technical · decided-by: agent
+  · Renomear os títulos das duas fixtures (`fixture-post-projeto`,
+  `fixture-post-comum`) para variantes sem `[RASCUNHO]`, preservando os
+  slugs de arquivo (usados pelos testes) e o comportamento estrutural
+  (uma com `project: true`, uma comum).
+  · Motivo: o prefixo `[RASCUNHO]` é gatilho do guardrail `check_draft_guard`
+  do validador — proíbe publicar `[RASCUNHO]` com `noindex: false`.
+  Fixtures **nunca** são conteúdo publicável, e depois da Etapa B do D-1
+  (`noindex: false`) o guardrail passaria a reprovar as próprias fixtures,
+  quebrando o gate por um sinal falso.
+  · Alternativas rejeitadas: adicionar flag `--allow-draft-marker` só para
+  fixtures no validador (aumenta superfície do script para ganhar zero);
+  desligar a asserção do guardrail para fixtures via caminho (acopla o
+  validador ao layout de teste, invertendo a direção da dependência).
+  · Evidência: Watch out do task.md (achado da auditoria de impacto do Step 4).
+
+- **D-4 — Segundo arquivo do tema sombreado: `_includes/js-selector.html`**
+  · type: technical · decided-by: agent (registra fato consumado em `4083351`)
+  · O include seleciona o bundle JS por `page.layout == "post"` e o layout
+  filho `project-post` faz `page.layout` valer `project-post` (herança de
+  layout no Jekyll **não** propaga o nome). Sem sombreamento, posts de
+  projeto caem no bundle `commons.min.js` e ficam sem `mermaid.initialize`,
+  dayjs, lazy-polyfill, glightbox, clipboard e pageviews — quebrando o item
+  de MVP "Realce de sintaxe (Rouge) e Mermaid verificados em um post que use
+  ambos" para o único tipo de post que a spec destaca (projeto).
+  · Diverge da **letra** da decisão original ("nenhum arquivo do tema
+  sobrescrito") mas não do **motivo** — diferente do `metadata-hook.html`
+  (placeholder vazio, feito para ser sobrescrito), este é código do tema, e
+  bumps do Chirpy podem exigir reconciliação. Aceito porque as alternativas
+  são piores.
+  · Alternativas rejeitadas: (i) copiar mermaid/dayjs/etc. inline no
+  `project-post.html` (duplica lógica do tema, diverge silenciosamente de
+  mudanças upstream); (ii) trocar `layout: project-post` por `layout: post` e
+  injetar o bloco do repositório via `include` acionado por `page.project`
+  (perde a garantia estrutural do layout dedicado, item explícito de MVP);
+  (iii) contribuir upstream com um cheque mais frouxo (fora de escopo, adia
+  a entrega); (iv) manter o cheque original e chamar `mermaid.initialize`
+  à mão no post — não resolve dayjs/lazy-polyfill/glightbox/clipboard.
+  · **Consequência aceita:** `_includes/js-selector.html` sombreado precisa
+  ser reconciliado a cada bump do Chirpy — item permanente de Watch out.
+  · Evidência: `git show 4083351`; `_includes/js-selector.html` do gem 7.6.0
+  (branch original) vs. o nosso.
+
+- **D-5 — Verification do primeiro deploy é feita dentro do BLOG-2**
+  · type: product · decided-by: user (autor, 2026-09-29, via pedido de revisão)
+  · O Step 6 do BLOG-1 (README, `origin`, primeiro deploy, Verification
+  externa) ficou meio-executado no código: `README.md` existe, `origin`
+  aponta para o repositório público, o post real ETL/PRF foi de fato
+  publicado via Actions — mas a Verification (comandos + resultados) nunca
+  entrou no `task.md`. A revisão 2 registra que essa Verification é feita
+  como parte do BLOG-2, num único bloco coerente que também cobre a troca
+  do `noindex`, em vez de simular retroativamente uma validação do BLOG-1.
+  · Motivo: os checks externos do Step 6 (`robots.txt`/`sitemap.xml`
+  respondendo 200, meta `noindex` presente antes e ausente depois,
+  `last_modified_at` num segundo commit, `paths-ignore` do workflow) só
+  fazem sentido no estado pós-marco de saída — antes da troca do `noindex`,
+  metade das asserções seria diferente. Fechar Step 6 antes de BLOG-2 é
+  Verification em cima de estado transitório.
+  · Alternativas rejeitadas: (a) refazer a Verification retroativa do BLOG-1
+  agora e outra vez depois de `noindex: false` (duplica trabalho por
+  formalismo); (b) declarar Step 6 fechado sem Verification (viola a regra
+  da própria skill task de gravar comando + resultado); (c) pular a
+  Verification externa (perde a prova do `fetch-depth: 0` e do
+  `paths-ignore`, dois itens explícitos do plan).
+
+- **D-6 — Precondição para Etapa B do D-1: `etl-prf-data` público**
+  · type: product · decided-by: user (autor, 2026-09-29, via AU-18 do
+  `## Audit — rev 2 — 2026-09-29`)
+  · Repositório `github.com/ebenezer-dorneles/etl-prf-data` existe mas
+  está privado; leitor deslogado recebe 404 na primeira ação do post
+  ETL/PRF (clicar no link do projeto). Tornar o repositório público antes
+  de aplicar `noindex: false`. Requer conferência manual prévia de que
+  não há conteúdo sensível commitado (segredos, `.env`, dados internos,
+  drafts não publicados) — responsabilidade do autor.
+  · Alternativas rejeitadas: apontar `repo:` para outro repositório público
+  (não casa com o conteúdo específico do post); tirar `project: true` (o
+  post deixa de ser post-de-projeto, exatamente o tipo que a spec destaca);
+  deferir a Etapa B (adia a saída do MVP sem razão de conteúdo).
+  · Consequência operacional: entra como **primeiro item** do plan do
+  BLOG-2, antes da troca do `noindex`.
+
+- **D-7 — Diagnosticar Pages Source como primeira ação técnica do plan de BLOG-2**
+  · type: product · decided-by: user (autor, 2026-09-29, via AU-19 do
+  `## Audit — rev 2 — 2026-09-29`)
+  · Site publicado responde 404 hoje. Sem `gh` no host, o diagnóstico
+  requer o autor abrindo `github.com/ebenezer-dorneles/ebenezer-dorneles.github.io/settings/pages`
+  e `.../actions`, conferindo (a) Pages Source = "GitHub Actions", (b)
+  status do último workflow run. Hipótese principal: Watch out do Step 6
+  (Pages Source nunca confirmado, ficou em "Deploy from a branch" default)
+  — nesse caso, habilitar Pages Source e um push republica. Se o
+  diagnóstico revelar workflow quebrado (ex.: `htmlproofer` batendo em
+  link do post real, `configure-pages` falhando), escalar via **CR nova**
+  no `plan.md` do BLOG-2.
+  · Alternativas rejeitadas: (a) instalar `gh` no host + `gh auth login`
+  interativo só para diagnosticar (custo alto, autor confere mais rápido
+  no painel web); (b) tentar cegamente refazer o push sem diagnóstico
+  (arrisca outro build que não resolve e apaga sinal do problema
+  original).
+  · Evidência adicional: `command -v gh` sem saída (2026-09-29).
+
+- **D-8 — Invariante "home em ordem cronológica descrescente" verificado via fixtures**
+  · type: technical · decided-by: agent (2026-09-29, via AU-21 do delta audit rev 2)
+  · A regra 9 exige "home em ordem cronológica decrescente". Com 1 post real
+  no `_posts/`, a asserção do site publicado é trivialmente verdadeira. Resolução:
+  manter D-2 como está — a ordem é verificada no `tools/check.sh`, que roda
+  com fixtures symlinkadas (`2026-01-01` + `2026-01-02` + posts reais = sempre
+  ≥ 2 elementos ordenáveis), garantindo cobertura estrutural do código do
+  tema. No site publicado com 1 post, a asserção é vacuamente verdadeira
+  até o 2º post real — comportamento aceito, reversível na primeira
+  publicação seguinte.
+  · Alternativa rejeitada: exigir ≥ 2 posts reais como pré-condição para
+  Etapa B do D-1 (atrasa saída do MVP por asserção que já tem cobertura
+  de teste).
+
+- **D-9 — Detecção de drift do tema em bumps do Chirpy: diff manual documentado**
+  · type: technical · decided-by: agent (2026-09-29, via AU-22 do delta audit rev 2)
+  · Sombreamento de `_includes/js-selector.html` (D-4) e
+  `_includes/metadata-hook.html` precisa ser reconciliado a cada bump do gem.
+  Mecanismo: no commit que sobe a versão do `jekyll-theme-chirpy`, executar
+  `docker compose run --rm site diff -u $(bundle show jekyll-theme-chirpy)/_includes/js-selector.html _includes/js-selector.html`
+  e idem para `metadata-hook.html`; colar o output (mesmo se vazio) no
+  corpo do commit message. Documento único de disciplina, sem automação
+  em CI — bumps são raros e manuais. Consequência aceita: bump sem checagem
+  quebra mermaid/toc em produção, regressão **visível**, não silenciosa.
+  · Alternativa rejeitada: check automatizado no CI (custo de manutenção
+  desproporcional à frequência real do gatilho).
+
+- **D-10 — Subitens do Step 6 no `task.md` viram `superseded by BLOG-2` na abertura do plan de BLOG-2**
+  · type: technical · decided-by: agent (2026-09-29, via AU-23 do delta audit rev 2)
+  · O checklist do Step 6 (BLOG-1) permanece desmarcado no `task.md` — desalinhado
+  com D-5, que consolida a Verification em BLOG-2. Resolução: quando
+  `ssd-task` decompuser o BLOG-2, os subitens abertos do Step 6 passam a
+  `- [ ] ~~item~~ (superseded by BLOG-2)`, e `## Deviations` do task.md
+  ganha uma linha datada registrando o superseded. Nada é apagado; a
+  rastreabilidade fica intacta.
+  · Alternativa rejeitada: marcar como concluídos sem Verification (viola
+  a regra do próprio ssd-task de gravar comando + resultado); deixar
+  desmarcado indefinidamente (torna ambíguo o estado do BLOG-1).
+
+- **D-11 — Etapa B do D-1 (flip do `noindex`) tem pré-condição de conteúdo: ≥ 10 posts reais publicados**
+  · type: product · decided-by: user (autor, 2026-09-29, via AU-20 do delta audit rev 2)
+  · Refina o D-1 Etapa B: `noindex: true` → `noindex: false` só é aplicado
+  quando `_posts/` contém **≥ 10 posts reais publicados**, onde "real" =
+  sem prefixo `[RASCUNHO]` no `title` **e** (se `project: true`) com `repo`
+  que responde HTTP 200 para leitor deslogado (D-6 aplicado). O gate deixa
+  de ser "validação visual" (AU-20) e passa a ser contador concreto e
+  verificável:
+    `count=$(grep -rL '\[RASCUNHO\]' _posts/ | wc -l); [ "$count" -ge 10 ]`
+  · Motivo: portfólio publicado com 1 post é frágil demais para justificar
+  exposição a busca — cache de buscador é irreversível na prática
+  (Decisions do BLOG-1 e AU-26), e primeira impressão de um portfólio
+  quase vazio pesa contra o objetivo declarado. 10 posts é limite
+  suficiente para o site ter cara de portfólio, exercitar múltiplas
+  categorias e tags, e para as invariantes do D-2 rodarem contra volume
+  real em vez de por vacuidade.
+  · Consequência para o plan de BLOG-2: divide-se em duas fases naturais.
+  **Fase técnica (executável agora):** tornar `etl-prf-data` público (D-6),
+  configurar Pages Source (D-7), reescrever `test/site_test.rb` para
+  invariantes (D-2), ajustar fixtures (D-3), verificar deploy do estado
+  atual com `noindex: true` (D-5), consolidar 4083351/6b16713. **Fase de
+  conteúdo (gated):** o flip do `noindex` fica em espera até o 10º post
+  real existir. Pode levar semanas ou meses; é característica desejada,
+  não bug do processo.
+  · Alternativas rejeitadas: (a) valor menor (5 posts insuficiente para
+  cara de portfólio); (b) prazo em vez de contagem (data arbitrária
+  desliga a métrica que importa); (c) manter D-1 como está sem AC (AU-20
+  reabre); (d) publicar sem `noindex` e assumir que ninguém vai achar
+  (autor confia no anonimato — quebra em qualquer link compartilhado).
+  · Encaminhamento: requer edit em D-1 (adicionar a precondição explícita
+  no texto de Etapa B, ligando para D-11) e na subseção `### BLOG-2 —
+  Marco de saída do MVP` de `## Scope` (dividir "pendente" em "agora" vs
+  "no marco de 10 posts"). Deferido para **ssd-spec** (revisão 3).
+
+- **D-12 — Modernização UC-n/FR-n/AC-n em issue própria (BLOG-3), precede execução do plan de BLOG-2**
+  · type: technical · decided-by: user (autor, 2026-09-29, via AU-24 do delta audit rev 2)
+  · Regras de negócio 1–15 da spec legada são convertidas em `UC-n`/`FR-n`/`AC-n`
+  numa issue dedicada (`BLOG-3`) antes de o plan de BLOG-2 começar. BLOG-2
+  continua registrado na spec (D-1..D-11, D-13, subseção BLOG-2 do Scope) mas
+  seu plan e execução esperam BLOG-3 fechar a modernização estrutural.
+  · Motivo: garantir que o plan de BLOG-2 — que introduz D-11 gated em
+  conteúdo, testes reescritos e mudança de config sensível — seja escrito
+  sobre estrutura sólida, com Coverage rastreável até FR-n/AC-n em vez do
+  proxy "regra 3", "regra 9". Reconhece o custo aceito: adiar a fase
+  técnica do BLOG-2 (repo público, Pages Source, testes migrados,
+  fixtures ajustadas) por trabalho estrutural.
+  · Consequência operacional: pipeline vira `spec rev 3 (edits awaiting) →
+  audit delta → aprovação → BLOG-3 (rev 4 de modernização + plan + task +
+  verify) → BLOG-2 (plan sobre spec modernizada) → task → verify`.
+  Estado atual (gate local vermelho, `noindex: true`, site 404) **permanece
+  durante todo BLOG-3**. O autor aceita essa janela.
+  · Alternativa rejeitada: modernizar dentro do BLOG-2 (mistura escopo);
+  aceitar como dívida legada (AU-24 fica aberta indefinidamente); só FR-n
+  para BLOG-2 (mistura estilos, cria dívida durável).
+
+- **D-13 — Procedimento de despublicação de emergência depois de `noindex: false`**
+  · type: product · decided-by: user (autor, 2026-09-29, via AU-26 do delta audit rev 2)
+  · Uma vez que Etapa B do D-1 seja aplicada (após o marco de 10 posts do
+  D-11) e o site esteja indexado por buscadores, o procedimento para
+  despublicar em emergência é o seguinte, escolhido pela natureza do
+  problema:
+
+  **(A) Post com erro editorial ou informação incorreta:**
+    1. `git revert <sha>` do commit que introduziu o problema **ou** edit
+       corretivo do post com atualização de `last_modified_at`.
+    2. `git push` para `main`; Actions republica em minutos.
+    3. Recrawl orgânico do Google leva horas a dias. Se urgente:
+       Google Search Console → Inspeção de URL → Solicitar indexação.
+
+  **(B) Dado sensível vazado (segredo, e-mail privado, dado de terceiro
+  sem consentimento):**
+    1. Remover o conteúdo do post e re-publicar imediatamente (mesmo fluxo A).
+    2. Para que a URL antiga não sobreviva em cache:
+       - Google: Search Console → Remoções → Solicitar remoção temporária
+         (efeito imediato, dura ~6 meses; renovar ou consolidar depois);
+       - Bing: Bing Webmaster Tools → Content Removal.
+    3. Se o dado estava em commit anterior, reescrever histórico:
+       `git filter-repo --path <arquivo> --invert-paths` seguido de
+       `git push --force-with-lease origin main`. Cuidado: reescreve `main`;
+       fazer numa janela de baixo tráfego.
+    4. Se o vazamento for reputacionalmente crítico e (1)–(3) forem
+       insuficientes, tornar `ebenezer-dorneles.github.io` privado
+       temporariamente (perde Pages no plano gratuito, o site fica offline)
+       enquanto se reescreve o histórico. Restaurar público depois.
+
+  **(C) O que nunca fazer:** commit "silencioso" que apaga arquivo sem
+  `git revert` visível — quebra a regra 7 (histórico rastreável) e
+  esconde o incidente do próprio autor no futuro.
+
+  · Motivo: sem procedimento pré-escrito, resposta a incidente é
+  improvisada sob pressão — o autor toma decisões erradas (force push sem
+  `--force-with-lease`, revert que não recrawla, remoção de arquivo sem
+  apagar da URL indexada, esquecer do cache do Bing). Documentar antes do
+  incidente é o único jeito.
+  · Alternativa rejeitada: aceitar como consequência do modelo Pages
+  público (autor navega documentação de dois consoles durante incidente
+  ativo — perde tempo crítico).
+
 ---
 
 ## Scope
@@ -354,6 +641,108 @@ Limitações que o validador **não** cobre, e que ficam por conta da revisão h
   traz `_includes/post-sharing.html` alimentado por `_data/share.yml`. Não é trabalho, é
   configuração; entra no MVP junto com o resto do `_data/`.
 
+### BLOG-2 — Marco de saída do MVP
+
+Executa o marco de saída registrado em Decisions do BLOG-1 e absorve o
+trabalho já realizado no código sem plan/spec (`686c5c0`, `4083351`,
+`6b16713`). Após o delta audit rev 2 e a decisão D-11, o BLOG-2 divide-se
+em **duas fases naturais**, com pré-requisitos diferentes e cronologia
+potencialmente distante entre elas. Ver D-1..D-13.
+
+**Já feito antes desta revisão (documentar, não reimplementar):**
+
+- Três posts fictícios de prototipagem removidos (`686c5c0`). O `_posts/`
+  ficou vazio até o commit seguinte.
+- Primeiro post real publicado: `_posts/2026-09-29-etl-dados-prf.md`
+  (`6b16713`) — Ciência de Dados, com blocos de código Python (Rouge),
+  diagrama Mermaid e imagem própria em `assets/img/posts/etl-dados-prf/`;
+  sem prefixo `[RASCUNHO]`; `repo` apontando para repositório real (privado
+  hoje — ver D-6). Satisfaz a Etapa A do D-1.
+- Sombreamento de `_includes/js-selector.html` (`4083351`) — ver D-4. Sem
+  essa correção, mermaid, dayjs, lazy-polyfill, glightbox, clipboard e
+  pageviews não carregavam em `project-post`.
+- `README.md` na raiz do repositório, com o fluxo da regra 6.
+- `origin` configurado apontando para
+  `https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io.git`.
+
+#### Fase técnica (executável agora, com `noindex: true` ativo)
+
+Todas as ações abaixo executam **com o `noindex: true` ainda ativo**. O site
+permanece invisível a buscadores durante toda esta fase. Ordem sugerida para
+o plan de BLOG-2 (a ordem exata é do ssd-plan, não da spec):
+
+1. **Tornar `github.com/ebenezer-dorneles/etl-prf-data` público** (D-6) —
+   conferência prévia de conteúdo sensível pelo autor, depois flip de
+   visibilidade no GitHub. Precondição para o post ETL/PRF ser válido como
+   post-de-projeto.
+2. **Diagnosticar e habilitar Pages Source** (D-7) — autor confere
+   `settings/pages` e `actions/` no navegador. Hipótese principal é
+   `Deploy from a branch` default, que impede `actions/deploy-pages` de
+   publicar. Se o diagnóstico revelar workflow quebrado (`htmlproofer`
+   falhando, `configure-pages` errando), o próprio ssd-plan abre CR nova.
+3. **Reescrever `test/site_test.rb` para invariantes estruturais** (D-2).
+   Sem isso o gate local está vermelho (6 falhas hoje contra o estado atual
+   após a remoção dos fictícios).
+4. **Retirar prefixo `[RASCUNHO]` das fixtures**
+   `test/fixtures/site_posts/*.md` (D-3), para o gate continuar verde
+   depois do flip do `noindex` na Fase de conteúdo.
+5. **Registrar Verification externa** com `noindex: true` ainda ativo (D-5)
+   — comandos + resultados: `robots.txt`/`sitemap.xml` respondem 200; home
+   tem `<meta name="robots" content="noindex, nofollow">`;
+   `last_modified_at` aparece num post editado em segundo commit (prova do
+   `fetch-depth: 0`); commit só de `README.md` **não** dispara o workflow
+   (`paths-ignore`, Audit item 14 do rev 1).
+6. **Marcar subitens do Step 6 (BLOG-1) como `superseded by BLOG-2`** no
+   `task.md` (D-10); `## Deviations` do task.md registra o superseded
+   datado.
+
+Ao fim da Fase técnica, o site está publicado em
+`https://ebenezer-dorneles.github.io/` com o post ETL/PRF, mas **invisível
+a buscadores**. Gate local (`tools/check.sh`) verde. Estado de repouso
+prolongado do BLOG-2.
+
+#### Fase de conteúdo (gated no marco do D-11)
+
+**Precondição:** `_posts/` contém ≥ 10 posts reais publicados, onde "real"
+é título sem prefixo `[RASCUNHO]` **e** (se `project: true`) `repo` que
+responde HTTP 200 para leitor deslogado. Contador operacional:
+
+```bash
+count=$(grep -rL '\[RASCUNHO\]' _posts/*.md | wc -l)
+[ "$count" -ge 10 ] && echo "marco atingido" || echo "faltam $((10 - count))"
+```
+
+Cronologia esperada: **semanas a meses** depois do fim da Fase técnica,
+conforme o autor publica o conteúdo real. O plan de BLOG-2 pode ficar
+registrado como "aguardando marco" — sem trabalho ativo — durante todo esse
+período. Fica em espera, não em atraso.
+
+Quando o marco for atingido, o plan retoma:
+
+1. **Flip do `noindex`**: `_config.yml`, `noindex: true` → `noindex: false`
+   (ou remover a chave). Único commit; nenhuma outra edição na mesma leva
+   (facilita o rollback do D-13-A se necessário).
+2. **Verification pós-flip**: home **sem** meta robots; `sitemap.xml`
+   continua servindo o mesmo conteúdo; `htmlproofer` sobre o `_site/`
+   verde; `curl` no `repo` de cada post `project: true` responde 200 (o
+   mesmo cheque pode virar precondição operacional antes do flip).
+3. **Submissão inicial ao Google Search Console e Bing Webmaster Tools** —
+   opcional, acelera a primeira indexação. Documentar em `## Feedback` se
+   feito. Não é bloqueante: recrawl orgânico funciona.
+
+**Fora do escopo do BLOG-2 (ambas as fases, registrado, não trabalhado):**
+
+- `twitter.username` continua com placeholder do starter — Watch out do
+  task.md; não afeta regra 12; entra em fase 2 se o autor decidir publicar
+  em Twitter/X.
+- Trocar os passos inline `Build site`/`Test site` do workflow por
+  `bash tools/check.sh` — decisão adiada; hoje o validador só roda
+  localmente. Pode virar issue própria de infra.
+- Reconciliação futura do `_includes/js-selector.html` sombreado a cada
+  bump do Chirpy — Watch out permanente (D-4/D-9), não trabalho ativo.
+- **Modernização retroativa das regras 1–15 para UC-n/FR-n/AC-n** — vira
+  **BLOG-3**, e por D-12 precede a execução do plan de BLOG-2.
+
 ---
 
 ## Open questions
@@ -370,6 +759,78 @@ Limitações que o validador **não** cobre, e que ficam por conta da revisão h
 | Rastreador de issues | Decisions — identificador local `BLOG-<n>` |
 | Remote do GitHub | Decisions — junto do nome do repositório |
 | Linguagem do validador de front matter | Decisions — Ruby, `tools/validate-front-matter.rb` |
+
+---
+
+## Risks & assumptions
+
+Introduzida na revisão 3 (por AU-25 do `## Audit — rev 2 — 2026-09-29`).
+Registra hipóteses e riscos que o texto das Decisions cita implicitamente e
+que o correto funcionamento da spec depende. Cada item aponta a Decision que
+o embute e o que acontece se a hipótese não se sustentar.
+
+### R-1 — Cache de buscador é irreversível na prática (D-1, D-11, D-13)
+
+**Hipótese:** uma vez que Google ou Bing indexem uma URL do site, religar
+`noindex: true` depois **não** remove imediatamente a URL do índice, **não**
+invalida o snippet em cache, e o buscador leva de dias a meses para recrawlar
+e derrubar.
+
+**Consequência se a hipótese falha** (buscador respeita `noindex` retroativo
+rapidamente): o gate rígido do D-11 (10 posts reais antes do flip) fica
+menos crítico, mas nada quebra — o desenho preserva conservadorismo.
+Cenário improvável dado o comportamento documentado dos dois buscadores.
+
+**Consequência se a hipótese vale** (comportamento esperado, majoritário):
+justifica o gate do D-11, o procedimento explícito do D-13-B (Google Search
+Console → Remoções + reescrita de histórico + repo privado temporário como
+último recurso) e a orientação de commit único no flip para não empilhar
+mudanças cujo rollback isolado ficaria difícil.
+
+### R-2 — Autor mantém disciplina editorial ao aproximar o marco do D-11
+
+**Hipótese:** o autor **não** vai burlar o critério de "post real" do D-11
+publicando posts de corpo mínimo só para bater os 10, ou reetiquetando
+rascunhos como reais para acelerar o flip do `noindex`.
+
+**Consequência se a hipótese falha:** o site indexa com portfólio de
+aparência mas sem substância. O objetivo declarado ("portfólio complementar
+ao GitHub") é prejudicado exatamente no momento em que a promessa aumenta
+(indexação por busca amplia o público). O contador do D-11 continua
+satisfeito, mas o resultado prático é pior do que ter deferido o flip.
+
+**Mitigador registrado (não é validação automática, é convenção editorial):**
+posts de projeto seguem o template de `_drafts/template-projeto.md` (Step 4
+do BLOG-1) com as cinco seções da regra 13 — contexto, stack técnica,
+processo, resultado, aprendizados. O template lembra o autor da estrutura
+mínima no momento de escrever. Fica a cargo da revisão humana; validador
+não checa presença de headings.
+
+### R-3 — Bump do Chirpy pode reintroduzir bug do JS-selector em silêncio
+
+**Hipótese:** o autor **executa o diff manual documentado em D-9** antes de
+commitar qualquer bump do `jekyll-theme-chirpy`:
+
+```bash
+docker compose run --rm site \
+  diff -u $(bundle show jekyll-theme-chirpy)/_includes/js-selector.html \
+          _includes/js-selector.html
+# idem para _includes/metadata-hook.html
+```
+
+O output vai no corpo do commit message (mesmo se vazio, o que serve como
+registro de que a checagem foi feita).
+
+**Consequência se a hipótese falha** (autor esquece o diff): um bump que
+altera o `_includes/js-selector.html` do gem faz o nosso sombreado (D-4)
+divergir sem sinalizar. Sintoma: Mermaid, dayjs, lazy-polyfill, glightbox,
+clipboard e pageviews param de funcionar em `project-post` (regressão do
+`4083351`). Descoberta típica: leitor reporta o diagrama quebrado, depois
+do commit já publicado.
+
+**Sem automação em CI:** bumps são raros e manuais; o custo de um cheque
+automatizado desproporcional ao benefício. Se a frequência aumentar,
+reavaliar (feedback item, futura revisão).
 
 ---
 
@@ -435,3 +896,132 @@ comando e resultado registrados no `task.md`, não itens de spec.
 **Gate de saída.** Zero itens abertos: 17 achados, 17 fechados, e a última questão aberta
 da spec (linguagem do validador) fechada em `## Decisions`. A spec deixa de ser rascunho.
 Próximo passo do pipeline: **plan**.
+
+---
+
+## Audit — rev 2 — 2026-09-29
+
+Delta audit da revisão 2. Escopo: D-1..D-5, subseção `### BLOG-2 — Marco de saída do
+MVP` do Scope, e gaps herdados da spec legada (`UC-n`/`FR-n`/`AC-n` ausentes, quatro
+seções condicionais faltando). Ver rev 1 acima para o audit original.
+
+Duas checagens externas rodadas em 2026-09-29, resultado em `curl` bruto (sem folder de
+evidência, resposta é o próprio código HTTP):
+
+- `curl -o /dev/null -w '%{http_code}' https://github.com/ebenezer-dorneles/etl-prf-data` → **404**
+- `curl -o /dev/null -w '%{http_code}' https://ebenezer-dorneles.github.io/` → **404**
+
+Ambas mudam o entendimento do estado sob o qual D-1 Etapa B seria aplicada.
+
+| ID | Item | Type | Severity | Resolution | Status | Decided by | Decision | Evidence |
+|----|------|------|----------|------------|--------|------------|----------|----------|
+| AU-18 | `repo:` do único post real (`_posts/2026-09-29-etl-dados-prf.md:8` → `https://github.com/ebenezer-dorneles/etl-prf-data`) responde 404 hoje. Validador não pega (spec: valida formato, não existência); `htmlproofer --disable-external` também não. Aplicar Etapa B do D-1 sob este estado publica portfólio com link quebrado para "o projeto", contradizendo a intenção da regra 3. | impact | critical | product | resolved | user (autor, 2026-09-29) | D-6 | `curl → 404` (2026-09-29); `_posts/2026-09-29-etl-dados-prf.md:8`; repo confirmado privado pelo autor em 2026-09-29 |
+| AU-19 | `https://ebenezer-dorneles.github.io/` responde 404. Commit `6b16713` disparou o workflow, mas o site publicado não existe. Causas possíveis, todas a diagnosticar: (i) Pages → Source ainda "Deploy from a branch" (Watch out do Step 6, nunca confirmado); (ii) workflow falhou (htmlproofer contra o post real, ou primeiro build travado); (iii) run em execução. D-1 Etapa B em site que não publica é operação vazia. | impact | critical | product | resolved | user (autor, 2026-09-29) | D-7 | `curl https://ebenezer-dorneles.github.io/ → 404` (2026-09-29); task.md Watch out do Step 6 |
+| AU-20 | D-1 diz "validar visualmente com conteúdo real (Actions verde, home mostrando o post, categorias/tags renderizando) **antes** de expor à indexação" sem definir critério verificável. Autor único revisa o próprio trabalho; sem checklist concreto, o gate entre Etapas A e B é subjetivo e perde regressão. | quality | high | product | resolved | user (autor, 2026-09-29) | D-11 — edits aplicados na rev 3 (D-1 Etapa B cita D-11 explicitamente; `### BLOG-2` do Scope contém contador operacional e prosa da precondição) | D-1 no `## Decisions`; conversa 2026-09-29; verificado na rev 3 |
+| AU-21 | D-2 exige "home tem ≥ 1 post em ordem cronológica decrescente". Com 1 post real (`_posts/` hoje), a asserção de ordem é trivialmente satisfeita — regra 9 fica verificada por vacuidade. As fixtures do `check.sh` (`2026-01-01` e `2026-01-02`) são symlinks efêmeros de teste e **não** representam o site publicado. | edge | medium | technical | resolved | agent (2026-09-29) | D-8 | `ls _posts/`; `tools/check.sh:9-22` |
+| AU-22 | D-4 registra Watch out permanente (reconciliar `_includes/js-selector.html` a cada bump do Chirpy) sem mecanismo de detecção. Bump do gem por `bundle update` não avisa o autor de mudanças no JS-selector — descoberta é reativa (quebra de mermaid/tocbot num post real, potencialmente depois de deploy). | impact | medium | technical | resolved | agent (2026-09-29) | D-9 | `git show 4083351`; `_includes/js-selector.html` local vs. gem 7.6.0 |
+| AU-23 | D-5 diz por que a Verification do primeiro deploy vai para BLOG-2, mas não diz o que acontece com o checklist do Step 6 em `task.md` (todos os subitens desmarcados) enquanto BLOG-2 executa. Ambiguidade operacional para ssd-task/ssd-plan: marcar `superseded`, apagar, ou deixar desmarcado indefinidamente? | quality | low | technical | resolved | agent (2026-09-29) | D-10 | `task.md` — Checklist Step 6 |
+| AU-24 | Gap legado citado no pedido: spec usa "Regras de negócio 1–15" em vez de `UC-n`/`FR-n`/`AC-n`. Rev 2 não aborda. Consequência: sem chain `UC→FR→AC→plan phase/test`, a rastreabilidade que downstream depende (Coverage do ssd-plan, matriz do ssd-verify) trabalha com proxy fraco ("regra 3"). BLOG-2 é planejável assim (as regras cobrem o comportamento), mas revisão futura com comportamento novo vai sofrer. | quality | high | technical | deferred | user (autor, 2026-09-29) | D-12 — modernização vira BLOG-3, precede execução do plan de BLOG-2 | spec inteira; ausência da seção `## Requirements` |
+| AU-25 | Gap legado citado no pedido: seções obrigatórias por tier M ausentes — `## Non-functional requirements`, `## Constraints & dependencies`, `## Interfaces / requests`, `## Risks & assumptions`. Mais crítico para BLOG-2: **Risks & assumptions**. `noindex: false` é irreversível na prática (cache de buscador sobrevive ao rollback) mas o risco só aparece implicitamente no D-1. Sem seção dedicada, o próximo passo (audit ou verify) não tem onde ancorar. | quality | medium | technical | resolved | user (autor, 2026-09-29) | rev 3 adicionou `## Risks & assumptions` com R-1 (cache irreversível), R-2 (disciplina de 10 posts), R-3 (drift de tema). NFR/Constraints/Interfaces permanecem como dívida legada aceita. | seções ausentes; D-1; D-11; verificado na rev 3 |
+| AU-26 | Edge case não coberto no BLOG-2: se a Etapa B é aplicada e depois surge necessidade de despublicar (erro grave em post, dado sensível, reputacional), o único caminho é (a) commit de rollback + esperar cache de buscador decair, ou (b) tornar o repo privado (perde Pages no gratuito). Sem procedimento definido, resposta a incidente é improvisada. | edge | medium | product | resolved | user (autor, 2026-09-29) | D-13 | Decisions do BLOG-1 (repo público exigido pelo plano Pages gratuito); D-11 |
+
+**Pressão sobre as decisões que sobreviveram.** D-1 e D-5 se assumem sobre um "site que
+já publica"; AU-19 mostra que essa premissa não vale hoje. Enquanto AU-19 estiver
+`open`, tudo em BLOG-2 que depende do site (Verification, checagem do `noindex`,
+`last_modified_at`, `paths-ignore`) fica em espera — não porque a spec esteja errada,
+mas porque o alvo do teste ainda não existe.
+
+**Não auditável nesta passada.** Diagnóstico da causa raiz de AU-19 exige acesso à
+API do GitHub (status do último workflow run, configuração de Pages) ou ao painel do
+repositório. Fora do escopo do audit (que não escreve código nem faz login em serviços);
+entra como investigação inicial do BLOG-2 assim que aprovado.
+
+**Gate de saída (após settlement em 2026-09-29).** 9 achados triados:
+
+- **resolved (6):** AU-18 (D-6), AU-19 (D-7), AU-21 (D-8), AU-22 (D-9), AU-23 (D-10), AU-26 (D-13).
+- **deferred (1):** AU-24 → D-12: modernização UC/FR/AC vira BLOG-3, precede execução do plan de BLOG-2.
+- **open, awaiting spec edit (2):** AU-20 (D-11 exige edit em D-1 Etapa B e `### BLOG-2` do Scope) e AU-25 (adicionar `## Risks & assumptions` em rev 3).
+
+Aprovação da rev 2 **não** libera aqui — dois achados abertos pendentes de edit. Próximo
+passo do pipeline: **spec** → revisão 3, absorvendo os edits de AU-20 (D-11) e AU-25.
+Depois: **audit** (delta rev 3) → aprovação → **BLOG-3** (spec rev 4 de modernização,
+por D-12) → plan/task/verify de BLOG-3 → então plan de BLOG-2. A janela até o site
+publicar com `noindex: false` é longa e reconhecida pelo autor (D-12).
+
+---
+
+## Audit — rev 3 — 2026-09-29
+
+Delta audit da revisão 3. Escopo: verificar que os edits absorvem AU-20 e AU-25 do
+delta audit rev 2, e re-leitura crítica das três áreas tocadas (D-1 Etapa B,
+`### BLOG-2 — Marco de saída do MVP`, `## Risks & assumptions`) buscando novos
+achados.
+
+**Áreas tocadas na rev 3:**
+
+- D-1 Etapa B — reescrita para citar D-11 explicitamente; alternativa "N ≥ 2 posts"
+  agora strikethrough como superseded por D-11.
+- `### BLOG-2 — Marco de saída do MVP` — rewrite estrutural em duas fases (Fase
+  técnica agora, Fase de conteúdo gated no marco D-11), com contador operacional
+  em shell.
+- `## Risks & assumptions` — nova seção com R-1..R-3.
+
+**Passos de verificação:** re-leitura das três áreas contra D-1..D-13 acima e
+contra o texto das próprias áreas, buscando (a) inconsistências internas, (b)
+promessas em uma área não realizadas em outra, (c) implícitos que a rev 3 pode
+ter introduzido.
+
+| ID | Item | Type | Severity | Resolution | Status | Decided by | Decision | Evidence |
+|----|------|------|----------|------------|--------|------------|----------|----------|
+| AU-27 | Divergência trivial entre o contador do D-11 (`grep -rL '\[RASCUNHO\]' _posts/`) e o do `### BLOG-2` Fase de conteúdo (`grep -rL '\[RASCUNHO\]' _posts/*.md`). Formalmente diferentes: `_posts/` faz varredura recursiva incluindo subdiretórios; `_posts/*.md` só o topo. Jekyll aceita subdiretórios em `_posts/` para hierarquia de categorias, mas o BLOG-1 não usa (categorização via front matter). Ainda assim, dois textos autorais do mesmo comando divergem. | quality | low | technical | invalid | agent (2026-09-29) | Ambas as consultas produzem resultado idêntico dado o padrão adotado no BLOG-1 (sem subdiretórios em `_posts/`, categorização por front matter — regra 11). Se essa convenção mudar, `_posts/*.md` deixa de servir, mas o contexto atual não permite divergência prática | `_posts/` no repo hoje; regra 11 |
+| AU-28 | O contador do D-11 (`grep -rL '\[RASCUNHO\]' _posts/ \| wc -l`) checa **apenas** a metade "sem prefixo `[RASCUNHO]`" da definição de "post real". A outra metade — "se `project: true`, `repo` responde HTTP 200 para leitor deslogado" — não está no one-liner. Contador subestima falhas: um post com `[RASCUNHO]` removido mas `repo` ainda 404 contaria como real. | quality | medium | technical | resolved | agent (2026-09-29) | D-11 chama o script explicitamente de "contador operacional" (heurística de progresso), não gate. A prosa de D-11 define os dois critérios, e o `### BLOG-2` → Fase de conteúdo → passo 2 exige `curl` no `repo` de cada post `project: true` como precondição do flip. A cobertura completa está na spec, apenas distribuída — o script é indicador; o gate real é operacional | D-11 prosa; `### BLOG-2` Fase de conteúdo passo 2 |
+| AU-29 | D-5 (rev 2) diz que Verification do primeiro deploy é feita "num único bloco coerente que também cobre a troca do `noindex`". Após o split da rev 3, o BLOG-2 naturalmente produz **duas** Verifications distintas: uma pré-flip (Fase técnica passo 5) e outra pós-flip (Fase de conteúdo passo 2), potencialmente com meses de distância. Wording de D-5 fica desatualizado. | quality | low | technical | invalid | agent (2026-09-29) | Reler D-5: "num único bloco coerente" no contexto se refere à disciplina de gravar comando + resultado num único registro por fase, **não** a bloco único no tempo. Duas Verifications separadas (pré e pós) preservam essa coerência dentro de cada uma. Wording de D-5 continua consistente com o desenho da rev 3 — não há gap funcional | D-5 no `## Decisions`; `### BLOG-2` rev 3 |
+| AU-20 | *ver rev 2 acima* | — | — | — | resolved | user (autor, 2026-09-29) | D-11 — edits aplicados na rev 3 (verificado) | verificado na rev 3 |
+| AU-25 | *ver rev 2 acima* | — | — | — | resolved | user (autor, 2026-09-29) | rev 3 adicionou `## Risks & assumptions` com R-1..R-3 (verificado) | verificado na rev 3 |
+
+**Observações da re-leitura que não viraram findings.** (i) `### BLOG-2` Fase
+técnica passo 5 substitui o item antigo "Confirmar que o workflow do Actions
+publica o novo estado sem regressão do htmlproofer" — a confirmação segue implícita
+em "Verification externa" (site respondendo 200 depende do deploy real ter ocorrido).
+Não é omissão, é reescrita mais compacta. (ii) R-1 discute cache de buscador citando
+"D-13-A" e "D-13-B" — verificado, D-13 usa rótulos (A), (B), (C); casamento correto.
+(iii) A alternativa strikethrough em D-1 ("~~esperar N ≥ 2 posts~~") preserva
+convenção do contrato de ids (removidos ficam struck, apontando para o que os
+supersedeu). (iv) A cronologia "semanas a meses" da Fase de conteúdo não é
+pressuposto do plan — é reconhecimento explícito do gap entre fases, o que
+melhora rastreabilidade em ssd-status.
+
+**Pressão adversarial.** Tentei achar promessa em uma área que outra não cumpre.
+O único candidato: D-9 (diff manual de bumps) só é acionado se o autor lembrar
+de rodar, e R-3 depende disso. R-3 registra explicitamente essa hipótese, e o
+mitigador ("output no corpo do commit message, mesmo se vazio") é uma disciplina
+processual clara. Aceito como registrado.
+
+**Gate de saída.** 12 achados triados desde rev 2 (AU-18..AU-29): 9 resolved
+(AU-18, AU-19, AU-20, AU-21, AU-22, AU-23, AU-25, AU-26, AU-28) + 1 deferred
+(AU-24 → BLOG-3) + 2 invalid (AU-27, AU-29 — low tech, agente decide). **Zero
+itens open** em qualquer seção de audit. Exit gate da rev 3: **aberto**.
+
+Próximo passo do pipeline: **aprovação do usuário** para a revisão 3. Após
+aprovação, `phase: approved` e o pipeline pode continuar com **BLOG-3** (spec
+rev 4 de modernização retroativa por D-12).
+
+---
+
+## Revisions
+
+| Rev | Data | Issue | Gatilho | Mudanças |
+|---|---|---|---|---|
+| 1 | 2026-09-17 | BLOG-1 | Marco zero (spec legada) | Corpo original + `## Audit — 2026-09-17` (17/17 fechados). |
+| 2 | 2026-09-29 | BLOG-2 | Pedido do usuário (autor, 2026-09-29) — marco de saída do MVP | Frontmatter moderno (`phase: specifying`, `spec-revision: 2`, `tier: M`, `issues: [BLOG-1, BLOG-2]`). Nova subseção `### Decisions — BLOG-2 (rev 2)` com D-1..D-5. Nova subseção `### BLOG-2 — Marco de saída do MVP` em `## Scope`. Nova `## Approvals`. Reconhece commits `686c5c0`, `4083351` e `6b16713` como execução parcial do marco de saída. |
+| 3 | 2026-09-29 | BLOG-2 | Absorve AU-20 (D-11) e AU-25 do delta audit rev 2 | Edit em D-1 Etapa B (agora cita D-11 como precondição de ≥ 10 posts reais; alternativa de N ≥ 2 supersedida). Rewrite de `### BLOG-2 — Marco de saída do MVP` em `## Scope` (dividida em **Fase técnica** executável agora e **Fase de conteúdo** gated no marco). Nova seção `## Risks & assumptions` com R-1 (cache irreversível), R-2 (disciplina editorial dos 10 posts), R-3 (drift do tema em bumps do Chirpy). |
+
+---
+
+## Approvals
+
+| Rev | Data | Aprovador | Observação |
+|---|---|---|---|
+| 1 | 2026-09-17 | — | Aprovação implícita — spec legada, não passou por `ssd-audit` formal. A auditoria de conteúdo em `## Audit — 2026-09-17` fechou 17/17 achados, e as etapas 0–5 do plan foram executadas sob essa base. |
+| 2 | — | — | Não aprovada isoladamente. Delta audit rev 2 encontrou 2 open items awaiting spec edit (AU-20/D-11 e AU-25); ambos absorvidos na rev 3, que subsume rev 2 para efeito de aprovação. |
+| 3 | 2026-09-29 | autor (Ebenézer Dorneles) | Aprovada explicitamente após `## Audit — rev 3 — 2026-09-29` fechar com zero open items. Habilita `BLOG-3` (modernização retroativa UC/FR/AC por D-12) como próximo passo do pipeline, seguido de `plan` de BLOG-2. |
