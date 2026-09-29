@@ -8,118 +8,87 @@ step-by-step and spec.md for scope decisions.
 
 ## Checklist
 
-Passada: **BLOG-1** (MVP). Modo de decomposição: **só a próxima etapa aberta**. As
-etapas seguintes ficam em nível de etapa até a anterior fechar, porque o plano ainda
-vai se ajustar ao que o scaffold revelar.
+Passada: **BLOG-3** (naming e rastreabilidade — tags `FR-n`/`AC-n.m` em nomes de teste + matriz Coverage no plan).
+Modo de decomposição: **tier M — só a próxima fase aberta**. As demais ficam em nível
+de fase até a anterior fechar. Histórico completo dos Steps 0–5 do BLOG-1 no Execution
+Log abaixo.
 
-- [x] **Step 0 — Ruby 3.4 via Docker Compose**
-  - [x] `compose.yaml` na raiz (serviço `site`, bind mount `:z`, volume `bundle`, porta 4000)
-  - [x] `tools/docker/Dockerfile` (`ruby:3.4` + usuário `dev` com UID/GID do host + `safe.directory`)
-  - [x] `ruby -v` = 3.4.x no container; dono dos arquivos = 1000; `git log` funciona; volume gravável
-- [x] **Step 1 — Scaffold do starter**
-  - [x] Clonar o starter (`--depth 1`) no scratchpad; copiar para o repositório **sem** `.git`, `.gitignore`, `.gitmodules`, `assets/lib` e `.devcontainer/`
-  - [x] Conferir que `.gitignore` continua o nosso (sem `Gemfile.lock`)
-  - [x] `.ruby-version` com `3.4`
-  - [x] Red: `docker compose run --rm site bash tools/test.sh` falha antes do `bundle install`
-  - [x] `docker compose run --rm site bundle install`, depois `bundle lock --add-platform x86_64-linux`; `BUNDLED WITH` = 2.6.x
-  - [x] Green: `docker compose run --rm site bash tools/test.sh` verde com o site vazio do starter
-  - [x] Preview sobe: `docker compose run --rm --service-ports site bash tools/run.sh -H 0.0.0.0` responde em `http://localhost:4000`
-  - [x] Commit do scaffold puro, sem edições nos arquivos do starter
-- [x] **Step 2 — Validador de front matter** (TDD; comandos em plan → Tooling)
-  - [x] `minitest` no Gemfile (`group: :test`); `bundle install` no container; lock atualizado, `BUNDLED WITH` ainda 2.6.x
-  - [x] Esqueleto: `tools/validate-front-matter.rb` com `FrontMatterValidator.validate(path:, source:, config:)` devolvendo `[]` e `CATEGORIES`; CLI só sob `if $PROGRAM_NAME == __FILE__`
-  - [x] Red: `test/validate_front_matter_test.rb`, um caso por regra (lista do plan, Step 2), mais o caso válido; rodar e confirmar que **cada** caso falha pelo motivo certo (asserção, não `NameError`/`LoadError`)
-  - [x] Red: fixtures `test/fixtures/front_matter/{valid,invalid}/` e teste de CLI via `Open3` (exit 0 / exit 1 com mensagem)
-  - [x] Green: regras implementadas até a suíte passar; CLI sem argumentos varre `_posts/**/*.md` e `_drafts/**/*.md` e reporta todos os erros
-  - [x] Refactor: uma função por regra, cada uma devolvendo lista; mensagens `caminho: campo: problema` em pt-BR; `YAML.safe_load(..., permitted_classes: [Date, Time])`
-  - [x] `tools/check.sh` (validador + testes unitários); `bash -n` limpo; `ruby -wc` limpo nos `.rb`
-  - [x] `test` no `exclude:` do `_config.yml` (primeira edição do starter; registrado no Log)
-  - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [x] **Step 3 — Configuração do site** (Red/Green/Refactor em plan → Step 3)
-  - [x] Red: `test/site_test.rb` lendo `_site/` gerado: `<html lang="pt-BR">`; `<meta name="robots" content="noindex, nofollow">` na home; `sitemap.xml` e `robots.txt` existem; links de GitHub, LinkedIn e e-mail na home (regra 12); página `/about/` existe; `_site/test`, `_site/draft`, `_site/docs` e `_site/compose.yaml` **não** existem
-  - [x] Green: `_config.yml` com os campos do escopo do MVP (title, tagline, description, url, lang: pt-BR, github.username, social.*), mais `timezone: America/Sao_Paulo`, `noindex: true`, e `test`/`draft`/`compose.yaml` no `exclude:`
-  - [x] Green: `_includes/metadata-hook.html` emitindo o `<meta robots>` quando `site.noindex` é verdadeiro (única sobrescrita de arquivo do gem — placeholder vazio, aprovado no spec → Feedback)
-  - [x] Green: `_data/contact.yml` (LinkedIn ativado), `_data/share.yml` (sem mudança — já atendia), `_tabs/about.md` (texto provisório, marcado como tal)
-  - [x] Green: `tools/check.sh` completo — acrescentado `tools/test.sh` e `test/site_test.rb` ao final (validador → testes unitários → build+htmlproofer → testes de integração do site)
-  - [x] Refactor: `_config.yml` mantém ordem e comentários do starter; só os valores mudam (mais duas adições nossas sem equivalente no starter: chave `noindex` e dois itens no `exclude:`)
-  - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [x] **Step 4 — Layout `project-post` e template de projeto** (Red/Green/Refactor em plan → Step 4)
-  - [x] Red: fixture de post com `project: true` (exclusiva do teste, fora de `_posts/`); `site_test.rb` exige o link de `repo` no HTML do post e a ausência do bloco em post comum
-  - [x] Green: `_layouts/project-post.html` com `layout: post`, bloco do repositório antes de `{{ content }}`
-  - [x] Green: `_drafts/template-projeto.md` com as cinco seções da regra 13 e front matter que passa no validador (o validador do Step 2 cobra isso)
-  - [x] Refactor: reusar strings de `_data/locales` quando houver; senão, texto em pt-BR no layout, registrado como dívida de i18n da fase 2
-  - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [x] **Step 5 — Três posts fictícios** (Red/Green/Refactor em plan → Step 5)
-  - [x] Red: `site_test.rb` exige, contra os posts reais que serão adicionados: home em ordem decrescente de data (regra 9); página de cada categoria e de cada tag usadas; categoria com **um** item renderiza sem árvore quebrada (Audit item 17); tempo de leitura visível no post (regra 4); entrada de cada post no índice de busca do tema; bloco `.highlight` (Rouge) e Mermaid no post técnico; imagem servida de `assets/img/posts/<slug>/`
-  - [x] Green: três posts em `_posts/` — um por categoria (Ciência de Dados, Desenvolvimento), o terceiro com bloco de código, diagrama Mermaid e imagem própria; todos com `title` prefixado `[RASCUNHO]` e `repo` placeholder sintaticamente válido (ver spec → Decisions, "Conteúdo do MVP é fictício"); imagem redimensionada antes de commitar
-  - [x] Green: pelo menos um dos três usa `project: true` + `layout: project-post` (exercita o Step 4 com conteúdo real, não só fixture)
-  - [x] Atenção: com posts reais em `_posts/`, as fixtures de `test/fixtures/site_posts/` (Step 4) continuam ok enquanto `noindex: true` — ver Watch out
-  - [x] Refactor: conferência visual com `bash tools/run.sh` (home, post, categoria, tag, busca digitada, "sobre")
-  - [x] Gate: `docker compose run --rm site bash tools/check.sh` verde; `auditoria-de-impacto`; commit
-- [ ] **Step 6 — README, remote e primeiro deploy** (bloqueante, decisão do autor; Red/Green em plan → Step 6)
-  - [ ] Red: confirmar que `https://ebenezer-dorneles.github.io` ainda responde 404 (nada publicado)
-  - [ ] Bloqueio a resolver com o autor antes de qualquer push: Pages → Source = **GitHub Actions** nas settings do repositório
-  - [ ] Green: `README.md` com o fluxo da regra 6 (escrever → `jekyll serve` → commit → push → build do Actions → publicado)
-  - [ ] Green: push de `blog-1-mvp` → merge em `main` (é o deploy); acompanhar o run do Actions até ficar verde
-  - [ ] Verificação no site publicado (registrar comando e resultado no `task.md`): `robots.txt`/`sitemap.xml` respondem 200; home tem `<meta robots noindex>`; um post editado num segundo commit mostra `last_modified_at` (regra 8, prova o `fetch-depth: 0`); commit só de `README.md` **não** dispara o workflow (`paths-ignore`)
-  - [ ] Refactor: nenhum previsto pelo plan
-  - [ ] Decisão pendente, não bloqueante para o Step 6 em si: se/quando trocar os passos inline `Build site`/`Test site` do workflow por `bash tools/check.sh` — ver Watch out
+> **BLOG-1 Step 6 (README, remote e primeiro deploy) continua aberto e bloqueado**
+> pela decisão do autor sobre Pages → Source = **GitHub Actions**. Reaparecerá
+> aqui quando o bloqueio for resolvido; não interfere com BLOG-3 (comentários em
+> testes, sem mudança de comportamento).
+
+- [x] **BLOG-3 Baseline** — contagem exata das duas suites em HEAD `e1cb549` (ver Verification)
+- [ ] **BLOG-3 Phase 1 — Tag `test/validate_front_matter_test.rb`** (**bloqueada** — ver Deviations 2026-09-29 e Blockers)
+- [ ] **BLOG-3 Phase 2 — Tag `test/site_test.rb`** (**bloqueada** — depende de gate verde, hoje red com 6 falhas pré-existentes)
+- [ ] **BLOG-3 Phase 3 — Verificação cruzada Coverage ↔ testes**
 
 ## State Handover
 
-- **Done:** Steps 0–5. Step 5 (três posts fictícios) fechado: `_posts/` tem
-  três posts reais — `2026-01-05-analise-exploratoria-vendas.md` (Ciência de
-  Dados), `2026-01-10-api-tarefas-ruby.md` (Desenvolvimento, `project: true` +
-  `layout: project-post`, exercitando a Etapa 4 com conteúdo real) e
-  `2026-01-15-visualizando-pipelines.md` (Ciência de Dados, bloco de código
-  Python, diagrama Mermaid e imagem própria em
-  `assets/img/posts/visualizando-pipelines/diagrama.png`). Todos com `title`
-  prefixado `[RASCUNHO]` e `repo` placeholder sintaticamente válido.
-  `site_test.rb` ganhou 7 casos (ordem cronológica da home, páginas de
-  categoria/tag, categoria de um nível sem árvore quebrada, tempo de leitura,
-  índice de busca, highlight+Mermaid+imagem no post técnico). Confirmado por
-  inspeção do gem (`Jekyll::Utils.slugify`) e por build real, não por
-  suposição: categoria "Ciência de Dados" gera `_site/categories/ciência-de-
-  dados/` (acentuado, sem percent-encoding no nome do diretório); campo
-  `image.path` no front matter deve ser só o nome do arquivo (não o caminho
-  completo), porque `media_subpath` já prefixa o diretório — colocar o
-  caminho completo nos dois duplica o path e quebra o htmlproofer (achado
-  desta etapa, corrigido antes do commit). Conferência visual feita com
-  `tools/run.sh`: home, post de projeto, categoria acentuada, tag, sobre e
-  índice de busca todos responderam 200 com o conteúdo esperado. Nada foi
-  enviado ao `origin`.
-- **Next:** Step 6 — README, remote e primeiro deploy (ver plan.md → Stages e
-  a Checklist já decomposta acima). **Bloqueante:** precisa da confirmação do
-  autor sobre Pages → Source antes de qualquer push.
-- **Blockers / open decisions:** Step 6 não pode avançar até o autor confirmar
-  Pages → Source = **GitHub Actions** nas settings do repositório.
+- **Done nesta sessão (2026-09-29):** transição de pass de BLOG-1 para BLOG-3
+  (spec rev 4 aprovada, `## Plan — BLOG-3` presente em plan.md, sem CR aberto).
+  Baseline registrado em Verification abaixo, no HEAD `e1cb549`, com
+  `docker compose run --rm site bash tools/check.sh`. Nenhuma edição de código
+  aplicada; task.md reciclado (Checklist e State Handover) mantendo Deviations
+  e Execution Log.
+- **Next:** **Bloqueado.** Handoff a `ssd-plan`. Duas escolhas possíveis para
+  o autor (ver Blockers), ambas exigem amendment/nova seção em plan.md antes
+  que BLOG-3 possa progredir para Green.
+- **Blockers / open decisions:**
+  1. **Plan de BLOG-3 § Context afirma que `docker compose run --rm site bash
+     tools/check.sh` estava verde em `b1e1bfe`.** A baseline mostra 6 falhas
+     em `test/site_test.rb`, e a auditoria do histórico mostra que as falhas
+     são resíduo do commit `686c5c0` ("chore(content): remove posts fictícios
+     de prototipagem"), que precede `b1e1bfe`. Logo a claim é factualmente
+     incorreta e a Fase 2 do BLOG-3 ("Done when: `check.sh` verde") é
+     inalcançável hoje. Registrado em Deviations. **Escolhas para o autor:**
+     - (a) escrever `## Plan — BLOG-2 Fase técnica` primeiro (que executa D-2
+       reescrevendo `site_test.rb` para invariantes estruturais e cura as 6
+       falhas), depois BLOG-3 — o que **inverte** a ordem que o próprio plan
+       de BLOG-3 registrou em `### Deferred`;
+     - (b) amendment ao plan de BLOG-3: aceitar gate red só nas 6 asserções
+       pré-existentes, adotar a contagem exata de falhas como invariante do
+       "diff só de comentários" (`22 runs / 6 failures` antes = depois), e
+       reescrever "Done when" da Fase 2 para essa condição.
+  2. **BLOG-1 Step 6 (Pages → Source = GitHub Actions) continua pendente do
+     autor.** Não bloqueia BLOG-3 diretamente, mas continua sendo a única
+     barreira para o deploy do MVP.
 - **Watch out:**
-  - Todo comando Ruby/Jekyll roda **dentro** do container (`docker compose run --rm site …`).
-    O Ruby 4.0.6 do host geraria um lock com `BUNDLED WITH` 4.x.
-  - O workflow do starter **já** vem com `ruby-version: 3.4`: os três lugares com a
-    versão (Dockerfile, `.ruby-version`, workflow) estão alinhados sem edição.
-  - O workflow publica a cada push em `main`/`master`. Não fazer push de `main` antes do Step 6.
-  - O bundler 2.6 grava 11 plataformas no lock por padrão (arm, darwin, musl…), não só
-    `x86_64-linux`. É o comportamento dele e é inofensivo; não "limpar" à mão.
-  - O validador **ainda não roda no workflow do Actions** — `check.sh` já cobre tudo
-    localmente, mas o job do `.github/workflows/pages-deploy.yml` continua com os
-    passos inline `Build site`/`Test site` do starter. Trocar pelo `check.sh` é
-    trabalho do Step 6 (ou de quando o workflow for tocado), não decidido ainda em
-    qual Step exato — registrar ao chegar lá.
+  - Todo comando Ruby/Jekyll roda **dentro** do container
+    (`docker compose run --rm site …`). O Ruby 4.0.6 do host geraria um lock
+    com `BUNDLED WITH` 4.x.
+  - Nada foi pushed nesta sessão. Sem risco irreversível alcançado.
   - `test/site_test.rb` faz `skip` se `_site/` não existir: sempre rodar via
-    `tools/check.sh` (que builda antes) ou `tools/test.sh` manualmente antes do teste,
-    senão a suíde "passa" sem verificar nada.
-  - `twitter.username` no `_config.yml` continua com o placeholder do starter
-    (`twitter_username`) — fora do escopo da regra 12, mas vai aparecer no meta
-    `twitter:site` se o site for publicado assim. Não bloqueia o MVP; registrar se
-    virar item de fase 2.
-  - **Achado da auditoria de impacto do Step 4, ainda sem correção:** as fixtures
-    de `test/fixtures/site_posts/` têm título `[RASCUNHO]…`, o que o validador só
-    aceita com `noindex: true`. Quando o marco de saída do MVP remover o
-    `noindex`, o gate (`tools/check.sh`) vai passar a reprovar essas fixtures.
-    Tratar junto da remoção dos posts fictícios (Decisions → "marco de saída do
-    MVP"): tirar o prefixo `[RASCUNHO]` das fixtures (elas não são posts reais,
-    não precisam do marcador) antes ou junto dessa mudança.
+    `tools/check.sh` (que builda antes), senão a suíte "passa" sem verificar.
+  - Achado antigo do Step 4 sobre `[RASCUNHO]` nas fixtures de
+    `test/fixtures/site_posts/` continua válido; endereçado por BLOG-2 D-3
+    (renomear títulos das fixtures) na Fase técnica do BLOG-2. Hoje inofensivo
+    porque `noindex: true` ainda ativo.
+  - `twitter.username` continua com placeholder do starter — fora do escopo da
+    regra 12 / FR-12, registrar se virar item de fase 2.
+  - O validador **ainda não roda no workflow do Actions** — `check.sh` cobre
+    tudo localmente, mas o job continua com passos inline `Build site`/`Test
+    site` do starter. Item do Step 6 do BLOG-1 (ou de quando o workflow for
+    tocado).
+
+## Deviations
+
+- 2026-09-29 — Plan de BLOG-3 § Context afirma "check.sh verde no último
+  commit (`b1e1bfe`)". A baseline coletada em HEAD `e1cb549` mostra 6 falhas
+  em `test/site_test.rb`, todas resíduo do commit `686c5c0`
+  ("chore(content): remove posts fictícios de prototipagem"), que precede
+  `b1e1bfe`. Testes afetados (todos citando slugs removidos ou tag `ruby`
+  daí derivada): `test_post_tecnico_tem_highlight_e_mermaid`,
+  `test_indice_de_busca_lista_os_tres_posts_ficticios`,
+  `test_imagem_do_post_e_servida_e_referenciada`,
+  `test_home_lista_posts_em_ordem_cronologica_decrescente`,
+  `test_tempo_de_leitura_visivel_no_post`,
+  `test_tags_tem_pagina_por_tag_usada`. A condição "Done when: `check.sh`
+  verde" da Fase 2 do BLOG-3, e a ordem "BLOG-3 antes de BLOG-2 Fase técnica"
+  registrada em `### Deferred` do plan, ficam ambas em conflito com a
+  realidade do gate.
+  · class: plan-affecting
+  · action: handed to plan
 
 ## Execution Log
 
@@ -346,6 +315,29 @@ vai se ajustar ao que o scaffold revelar.
   internos/0 falhas; `site_test.rb` 22 runs/55 assertions/0 falhas/0 erros.
 - Commit `3298eae`. Step 6 decomposto na Checklist.
 
+### 2026-09-29 — BLOG-3: transição de pass, baseline e handoff a plan
+
+- **Gate para ssd-task (BLOG-3):** `## Plan — BLOG-3` presente em plan.md;
+  `Spec revision: 4` bate com `spec-revision: 4` do spec; rev 4 aprovada em
+  `## Approvals` (autor, 2026-09-29); nenhum CR aberto. Precondição formal
+  satisfeita.
+- **Estado do BLOG-1:** Steps 0–5 fechados; Step 6 continua aberto e bloqueado
+  pela decisão do autor sobre Pages → Source. Não é regredido nem re-executado
+  aqui — apenas movido para nota no topo da Checklist enquanto o pass ativo é
+  BLOG-3.
+- **Reset de Checklist e State Handover** para o novo pass, mantendo Execution
+  Log e agora também `## Deviations` (nova seção, criada nesta sessão pela
+  primeira vez — a estrutura da task.md do BLOG-1 antecede o contrato atual
+  do ssd-task e não a incluía).
+- **Baseline** rodada com `docker compose run --rm site bash tools/check.sh`
+  em HEAD `e1cb549`. Números exatos em `## Verification → 2026-09-29 —
+  BLOG-3 Baseline`. As 6 falhas do `site_test.rb` são pré-existentes desde
+  `686c5c0` — confirmação por `git log --oneline` e leitura das mensagens
+  de erro (asserções sobre slugs de posts fictícios já removidos).
+- **Deviation registrada** (acima). Nenhuma edição de código nem de spec
+  nesta sessão. Handoff a `ssd-plan` para amendment de plan de BLOG-3 ou
+  para escrever `## Plan — BLOG-2 Fase técnica` primeiro (ver Blockers).
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -408,11 +400,30 @@ vai se ajustar ao que o scaffold revelar.
 - [x] Análise estática / lint — nenhum `.rb`/`.sh` alterado nesta etapa
 - [x] Artefato visível — conferência visual via `tools/run.sh` + `curl`: home (200, lista os 3 posts), `/posts/api-tarefas-ruby/` (200, link do repositório), `/categories/ci%C3%AAncia-de-dados/` (200, lista os posts da categoria), `/tags/ruby/` (200), `/about/` (200), `/assets/js/data/search.json` (200, contém o post técnico)
 
+### 2026-09-29 — BLOG-3 Baseline
+
+- **HEAD:** `e1cb549` (`docs(plan): abre BLOG-3 com matriz Coverage dos 41 ACs`)
+- **Comando:** `docker compose run --rm site bash tools/check.sh`
+- **Validador** (`test/validate_front_matter_test.rb` + CLI):
+  26 runs, 29 assertions, 0 failures, 0 errors, 0 skips
+- **Build produção + htmlproofer:** 16 arquivos gerados; 22 links internos
+  verificados; 0 falhas
+- **`test/site_test.rb`:** 22 runs, 37 assertions, **6 failures**, 0 errors,
+  0 skips — falhas pré-existentes desde `686c5c0` (remoção dos posts
+  fictícios), listadas em Execution Log e Deviations desta sessão.
+- **Interpretação:** validador e vfm_test.rb servem de baseline sólido para
+  a Fase 1 do BLOG-3 (invariante "26 runs / 29 assertions / 0 failures / 0
+  errors" antes e depois). `site_test.rb` **não** tem baseline verde para a
+  Fase 2; a contagem exata pré-comentário fica registrada aqui como
+  referência caso a escolha (b) do Blocker seja adotada
+  (`22 runs / 37 assertions / 6 failures / 0 errors` como invariante do
+  "diff só de comentários").
+
 ## Wrap up
 
 Autor único, sem PR (plan → Tooling → Git): a entrega é o merge de `blog-1-mvp` em `main`.
 
-- [ ] Merge `blog-1-mvp` → `main` e push (é o deploy: Step 6)
-- [ ] Spec linkado ao issue — n/a, `BLOG-1` é identificador local registrado no próprio `spec.md`
-- [ ] Follow-up registrado: `BLOG-2` (marco de saída do MVP) como nova seção em `plan.md` quando começar
-- [ ] `spec.md` `status:` → `implemented` quando a Verification do Step 6 fechar
+- [ ] Merge `blog-1-mvp` → `main` e push (é o deploy: BLOG-1 Step 6, bloqueado no autor)
+- [ ] Spec linkado ao issue — n/a, `BLOG-1`/`BLOG-2`/`BLOG-3` são identificadores locais registrados no próprio `spec.md`
+- [ ] Follow-up registrado: `BLOG-2 Fase técnica` como nova seção em `plan.md` (D-2..D-7)
+- [ ] `spec.md` `status:` → `implemented` só quando a Verification do último issue em execução fechar (não aplicável nesta passada — BLOG-3 é comentários, não muda status)
