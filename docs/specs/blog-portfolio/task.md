@@ -13,10 +13,13 @@ Modo de decomposição: **tier M — só a próxima fase aberta**. As demais fic
 de fase até a anterior fechar. Histórico completo dos Steps 0–5 do BLOG-1 no Execution
 Log abaixo.
 
-> **BLOG-1 Step 6 (README, remote e primeiro deploy) continua aberto e bloqueado**
-> pela decisão do autor sobre Pages → Source = **GitHub Actions**. Reaparecerá
-> aqui quando o bloqueio for resolvido; não interfere com BLOG-3 (comentários em
-> testes, sem mudança de comportamento).
+> **BLOG-1 Step 6 (README, remote e primeiro deploy) — desbloqueio parcial em
+> 2026-09-29:** autor trocou Pages → Source para **GitHub Actions** no painel
+> do repositório `ebenezer-dorneles/ebenezer-dorneles.github.io` (D-7 do BLOG-2
+> concluído). Falta o primeiro `git push origin main` (ou merge de `blog-1-mvp`
+> em `main`) para disparar `.github/workflows/pages-deploy.yml` e ativar o
+> environment `github-pages`. Primeiro deploy ainda pendente da decisão de
+> mergear.
 
 - [x] **BLOG-3 Baseline** — contagem exata das duas suites em HEAD `e1cb549` (ver Verification)
 - [x] **BLOG-3 Phase 1 — Tag `test/validate_front_matter_test.rb`** (desbloqueada por Amendment 2026-09-29)
@@ -49,18 +52,54 @@ Log abaixo.
   - Phase 3 cross-check: `grep tags = grep defs = 48`; todos os ACs
     testados da Coverage matrix presentes em ≥ 1 linha de tag
   - `ruby -wc` limpo nos dois arquivos
-- **Next:** invocar skill `auditoria-de-impacto` sobre o diff (formalizar
-  a checagem já feita a olho) e criar commit único de BLOG-3 — ambos
-  aguardam a chancela do autor. Depois de fechado o commit, ssd-verify
-  entra em cena para validar contra o spec (validation.md).
+- **Também done nesta sessão (2026-09-29):**
+  - Auditoria de impacto formal (`auditoria-de-impacto` skill) executada
+    sobre o diff BLOG-3: veredito PRONTO PARA COMMIT.
+  - Commit único BLOG-3: `76cb996`
+    (`test(blog-portfolio): tag 48 testes com # @spec para rastreabilidade (BLOG-3)`).
+  - Verify pass: `e87db58`
+    (`docs(verify): registra BLOG-3 validado contra spec rev 4`), com
+    `validation.md` completo (43 ACs walkados, 13 UCs mapeados, D-12 e
+    Amendment honrados, 0 CRs). Spec frontmatter `phase: planning →
+    validating`.
+  - **D-7 do BLOG-2 concluído:** autor trocou Pages → Source para
+    GitHub Actions no painel de `ebenezer-dorneles.github.io`.
+    Workflow `.github/workflows/pages-deploy.yml` continua o mesmo do
+    starter; primeiro deploy aguarda apenas push/merge para `main`.
+  - **D-6 do BLOG-2 concluído:** autor tornou público
+    `github.com/ebenezer-dorneles/etl-prf-data`. Link no post PRF
+    (`_posts/2026-09-29-etl-dados-prf.md:8`) agora responde para
+    leitor deslogado — habilita a Verification externa de AC-18.3
+    (D-5 do BLOG-2).
+- **Next:**
+  - `ssd-plan` para abrir `## Plan — BLOG-2 Fase técnica` cobrindo
+    o que resta em `plan.md § Deferred`: **D-2** (reescrita de
+    `site_test.rb` para invariantes estruturais — cura as 6 falhas),
+    **D-3** (renomear títulos das fixtures — desarmar armadilha do
+    flip de `noindex`), **D-5** (Verification externa pré-flip, agora
+    viável com D-6 done), **D-10** (supersede formal do Step 6 antigo
+    do BLOG-1).
+  - Fora do pipeline SSD, decisão do autor: `git push origin main`
+    (ou merge de `blog-1-mvp` em `main`) para disparar o primeiro
+    deploy real e fechar o restante do BLOG-1 Step 6. Site sai com
+    `noindex: true` (correto para o marco atual).
 - **Blockers / open decisions:**
   1. **Resolvido** (2026-09-29): Amendment do plan de BLOG-3 adotou opção (b) —
      invariante estrita de contagem `22/37/6/0` na Fase 2, mesmas 6 asserções
      falhas pré-existentes antes = depois. BLOG-2 D-2 continua responsável
      por curar as 6 falhas depois de BLOG-3 fechar.
-  2. **BLOG-1 Step 6 (Pages → Source = GitHub Actions) continua pendente do
-     autor.** Não bloqueia BLOG-3 diretamente, mas continua sendo a única
-     barreira para o deploy do MVP.
+  2. **Resolvido** (2026-09-29): autor trocou Pages → Source para
+     **GitHub Actions** no painel do repositório
+     `ebenezer-dorneles/ebenezer-dorneles.github.io` (D-7 do BLOG-2).
+     Restante do Step 6 (primeiro `push origin main` + confirmação da run
+     verde em Actions + smoke do environment `github-pages`) permanece
+     pendente da decisão do autor de mergear `blog-1-mvp` em `main`. **Ver
+     Watch out** sobre gate do workflow (não roda `check.sh`).
+  3. **Resolvido** (2026-09-29): autor tornou público o repositório
+     `github.com/ebenezer-dorneles/etl-prf-data` (D-6 do BLOG-2).
+     Link do post PRF (`_posts/2026-09-29-etl-dados-prf.md:8` e no
+     corpo) agora responde para leitor deslogado — habilita a
+     Verification externa de AC-18.3 (D-5 do BLOG-2).
 - **Watch out:**
   - Todo comando Ruby/Jekyll roda **dentro** do container
     (`docker compose run --rm site …`). O Ruby 4.0.6 do host geraria um lock
@@ -346,6 +385,46 @@ Log abaixo.
   internos/0 falhas; `site_test.rb` 22 runs/55 assertions/0 falhas/0 erros.
 - Commit `3298eae`. Step 6 decomposto na Checklist.
 
+### 2026-09-29 — BLOG-2 D-6: repositório `etl-prf-data` público
+
+- **Ação (fora do repo do blog, painel do GitHub):** autor liberou o
+  repositório `github.com/ebenezer-dorneles/etl-prf-data` como público.
+- **Referência afetada no blog:** `_posts/2026-09-29-etl-dados-prf.md:8`
+  (`repo: https://github.com/ebenezer-dorneles/etl-prf-data`) e link no
+  corpo do post (linha 365, "O código completo do projeto está disponível
+  no [GitHub](https://github.com/ebenezer-dorneles/etl-prf-data)").
+- **Efeito no gate hoje:** nenhum. `htmlproofer` roda com
+  `--disable-external` (por design — internet-off no CI), então o link
+  externo não é checado no `check.sh`. AC-3.4 pelo teste automatizado
+  continua verde através do HTML gerado.
+- **Efeito no futuro:** desbloqueia D-5 do BLOG-2 (Verification externa
+  pré-flip) — o passo manual "todo post `project: true` tem `repo` que
+  responde HTTP 200 para leitor deslogado" (AC-18.3) agora passa para
+  este post. Antes, esse item estaria travado.
+- **Consequência para o pipeline:** D-6 sai da lista de itens abertos
+  do BLOG-2 Fase técnica quando plan for reescrito para BLOG-2.
+
+### 2026-09-29 — BLOG-2 D-7: Pages Source trocado para GitHub Actions
+
+- **Ação (fora do repo, painel do GitHub):** autor trocou, em Settings →
+  Pages do repositório `ebenezer-dorneles/ebenezer-dorneles.github.io`,
+  o campo **Build and deployment → Source** de `Deploy from a branch`
+  para `GitHub Actions`.
+- **Estado do repo:** nenhuma edição de arquivo. O workflow
+  `.github/workflows/pages-deploy.yml` (do Chirpy starter) já existia
+  desde o Step 1 do BLOG-1 e agora é o job que o GitHub Pages usa para
+  publicar.
+- **Efeito imediato:** nenhum — o site ainda não foi publicado. Só o
+  próximo `git push origin main` (ou merge de `blog-1-mvp` em `main`)
+  vai disparar o workflow e ativar o environment `github-pages`.
+- **Consequência para o pipeline:** desbloqueia o restante do BLOG-1
+  Step 6 (Merge/push + smoke) e retira D-7 da lista de itens abertos
+  do BLOG-2 Fase técnica quando plan for reescrito para BLOG-2.
+- **Watch out mantido:** o workflow ainda não invoca `tools/check.sh`
+  como gate — continua com os passos inline `Build site`/`Test site`
+  do starter. Dívida separada, endereçada quando o workflow for tocado
+  (BLOG-2 Fase técnica ou uma issue própria de infra de CI).
+
 ### 2026-09-29 — BLOG-3 Phases 2 e 3: tag de `test/site_test.rb` + cross-check
 
 - **Phase 2 (Green — aplicação):** inseridos 22 `# @spec …` em
@@ -598,7 +677,7 @@ Log abaixo.
 
 Autor único, sem PR (plan → Tooling → Git): a entrega é o merge de `blog-1-mvp` em `main`.
 
-- [ ] Merge `blog-1-mvp` → `main` e push (é o deploy: BLOG-1 Step 6, bloqueado no autor)
+- [ ] Merge `blog-1-mvp` → `main` e push (é o deploy: BLOG-1 Step 6; D-7 concluído em 2026-09-29 — Pages Source = GitHub Actions no painel; falta só o push/merge)
 - [ ] Spec linkado ao issue — n/a, `BLOG-1`/`BLOG-2`/`BLOG-3` são identificadores locais registrados no próprio `spec.md`
 - [ ] Follow-up registrado: `BLOG-2 Fase técnica` como nova seção em `plan.md` (D-2..D-7)
 - [ ] `spec.md` `status:` → `implemented` só quando a Verification do último issue em execução fechar (não aplicável nesta passada — BLOG-3 é comentários, não muda status)
