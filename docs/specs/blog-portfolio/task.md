@@ -19,37 +19,45 @@ Log abaixo.
 > testes, sem mudança de comportamento).
 
 - [x] **BLOG-3 Baseline** — contagem exata das duas suites em HEAD `e1cb549` (ver Verification)
-- [ ] **BLOG-3 Phase 1 — Tag `test/validate_front_matter_test.rb`** (**bloqueada** — ver Deviations 2026-09-29 e Blockers)
-- [ ] **BLOG-3 Phase 2 — Tag `test/site_test.rb`** (**bloqueada** — depende de gate verde, hoje red com 6 falhas pré-existentes)
-- [ ] **BLOG-3 Phase 3 — Verificação cruzada Coverage ↔ testes**
+- [x] **BLOG-3 Phase 1 — Tag `test/validate_front_matter_test.rb`** (desbloqueada por Amendment 2026-09-29)
+  - [x] Inserir `# @spec <TAG>` antes de cada `def test_*` (26 tags aplicadas)
+  - [x] Targeted: 26/29/0/0 (idem baseline); `grep tags` = `grep defs` = 26; `ruby -wc` limpo
+- [x] **BLOG-3 Phase 2 — Tag `test/site_test.rb`** (invariante estrita)
+  - [x] Inserir `# @spec <TAG>` antes de cada `def test_*` (22 tags aplicadas)
+  - [x] `tools/check.sh` full: validador `26/29/0/0`, htmlproofer `16 arquivos/0 falhas`, site_test.rb `22/37/6/0` — **mesmas 6 falhas** do baseline (mesmos nomes de teste)
+  - [x] `grep tags` = `grep defs` = 22; `ruby -wc test/site_test.rb` limpo
+- [x] **BLOG-3 Phase 3 — Verificação cruzada Coverage ↔ testes**
+  - [x] `grep -c "# @spec"` total = 48; `grep -c "def test_"` total = 48
+  - [x] Cada AC listado como "testado" na Coverage aparece em ≥ 1 linha `# @spec` (walkthrough manual, todos os ~30 ACs testados batem)
+  - [x] Diff é 100% comentários adicionados (0 `def`/`assert*`/`refute*`/`require`/constante alterada)
+- [ ] Auditoria de impacto formal via skill + commit único de BLOG-3 (aguarda decisão do autor)
 
 ## State Handover
 
-- **Done nesta sessão (2026-09-29):** transição de pass de BLOG-1 para BLOG-3
-  (spec rev 4 aprovada, `## Plan — BLOG-3` presente em plan.md, sem CR aberto).
-  Baseline registrado em Verification abaixo, no HEAD `e1cb549`, com
-  `docker compose run --rm site bash tools/check.sh`. Nenhuma edição de código
-  aplicada; task.md reciclado (Checklist e State Handover) mantendo Deviations
-  e Execution Log.
-- **Next:** **Bloqueado.** Handoff a `ssd-plan`. Duas escolhas possíveis para
-  o autor (ver Blockers), ambas exigem amendment/nova seção em plan.md antes
-  que BLOG-3 possa progredir para Green.
+- **Done nesta sessão (2026-09-29):** Baseline BLOG-3 em HEAD `e1cb549`
+  registrada (validador `26/29/0/0`, htmlproofer `22 links/0 falhas`,
+  site_test `22/37/6/0`). **Amendment 2026-09-29** ao plan.md desbloqueou
+  BLOG-3 (autor escolheu opção (b) — invariante estrita de contagem).
+  **Phases 1, 2 e 3 executadas:** 48 tags `# @spec …` aplicadas (26 em
+  vfm_test.rb + 22 em site_test.rb); diff = 48 insertions puras, 0 linhas
+  de código tocadas. Gates:
+  - Phase 1 targeted `26/29/0/0` (idem baseline)
+  - Phase 2 full `tools/check.sh`: validador `26/29/0/0`, htmlproofer
+    `16 arquivos / 0 falhas`, site_test.rb `22/37/6/0` (**mesmas 6
+    falhas** do baseline, mesmos nomes de teste — invariante estrita do
+    Amendment)
+  - Phase 3 cross-check: `grep tags = grep defs = 48`; todos os ACs
+    testados da Coverage matrix presentes em ≥ 1 linha de tag
+  - `ruby -wc` limpo nos dois arquivos
+- **Next:** invocar skill `auditoria-de-impacto` sobre o diff (formalizar
+  a checagem já feita a olho) e criar commit único de BLOG-3 — ambos
+  aguardam a chancela do autor. Depois de fechado o commit, ssd-verify
+  entra em cena para validar contra o spec (validation.md).
 - **Blockers / open decisions:**
-  1. **Plan de BLOG-3 § Context afirma que `docker compose run --rm site bash
-     tools/check.sh` estava verde em `b1e1bfe`.** A baseline mostra 6 falhas
-     em `test/site_test.rb`, e a auditoria do histórico mostra que as falhas
-     são resíduo do commit `686c5c0` ("chore(content): remove posts fictícios
-     de prototipagem"), que precede `b1e1bfe`. Logo a claim é factualmente
-     incorreta e a Fase 2 do BLOG-3 ("Done when: `check.sh` verde") é
-     inalcançável hoje. Registrado em Deviations. **Escolhas para o autor:**
-     - (a) escrever `## Plan — BLOG-2 Fase técnica` primeiro (que executa D-2
-       reescrevendo `site_test.rb` para invariantes estruturais e cura as 6
-       falhas), depois BLOG-3 — o que **inverte** a ordem que o próprio plan
-       de BLOG-3 registrou em `### Deferred`;
-     - (b) amendment ao plan de BLOG-3: aceitar gate red só nas 6 asserções
-       pré-existentes, adotar a contagem exata de falhas como invariante do
-       "diff só de comentários" (`22 runs / 6 failures` antes = depois), e
-       reescrever "Done when" da Fase 2 para essa condição.
+  1. **Resolvido** (2026-09-29): Amendment do plan de BLOG-3 adotou opção (b) —
+     invariante estrita de contagem `22/37/6/0` na Fase 2, mesmas 6 asserções
+     falhas pré-existentes antes = depois. BLOG-2 D-2 continua responsável
+     por curar as 6 falhas depois de BLOG-3 fechar.
   2. **BLOG-1 Step 6 (Pages → Source = GitHub Actions) continua pendente do
      autor.** Não bloqueia BLOG-3 diretamente, mas continua sendo a única
      barreira para o deploy do MVP.
@@ -73,6 +81,29 @@ Log abaixo.
 
 ## Deviations
 
+- 2026-09-29 — 5 testes de `test/site_test.rb` receberam tags não-conformes
+  ao formato estrito da Strategy (`FR-N`/`AC-N.M`/`D-N`/`AU-N`), porque a
+  matriz Coverage do próprio plan registra essas linhas com títulos
+  informais ("Config pt-BR", "Exclude do `_config.yml`") sem FR/AC/D
+  associado: (a) `test_home_declara_lang_pt_br` → `# @spec (decisão pt-BR)`;
+  (b) `test_diretorio_test_nao_publicado`, `test_diretorio_docs_nao_publicado`,
+  `test_compose_yaml_nao_publicado` → `# @spec (exclude _config.yml)`;
+  (c) `test_diretorio_draft_nao_publicado` → `# @spec AC-2.1 (exclude _config.yml)`
+  (tem AC-2.1 formal + marker). Intent do plan (rastreabilidade
+  test→coverage) preservado porque as strings dos markers batem com os
+  títulos das rows Coverage.
+  · class: local
+  · action: continued
+- 2026-09-29 — Plan de BLOG-3 § Context registra "26 métodos (25 unit + 2
+  CLI)" e § Phases Fase 1 Done-when registra `grep -c "# @spec"
+  test/validate_front_matter_test.rb → 25`. O arquivo tem 24 unit + 2 CLI =
+  26 métodos. Interpretado como off-by-one de contagem (não decisão de
+  design): aplicadas 26 tags, uma por método, e o cross-check da Fase 3
+  passa a exigir igualdade `grep tags = grep defs` em vez do literal `25`.
+  Nenhum comportamento nem escopo muda; a intenção do plan ("tag em cada
+  `def test_*`") é preservada.
+  · class: local
+  · action: continued
 - 2026-09-29 — Plan de BLOG-3 § Context afirma "check.sh verde no último
   commit (`b1e1bfe`)". A baseline coletada em HEAD `e1cb549` mostra 6 falhas
   em `test/site_test.rb`, todas resíduo do commit `686c5c0`
@@ -315,6 +346,85 @@ Log abaixo.
   internos/0 falhas; `site_test.rb` 22 runs/55 assertions/0 falhas/0 erros.
 - Commit `3298eae`. Step 6 decomposto na Checklist.
 
+### 2026-09-29 — BLOG-3 Phases 2 e 3: tag de `test/site_test.rb` + cross-check
+
+- **Phase 2 (Green — aplicação):** inseridos 22 `# @spec …` em
+  `test/site_test.rb`, um por método `def test_*`, indent-2, sem linha
+  em branco entre tag e def (Strategy). Mapeamento AC→teste segue a
+  matriz Coverage do plan.
+- **Tags não-formais registradas** (local deviation abaixo):
+  - `test_home_declara_lang_pt_br` → `# @spec (decisão pt-BR)` (a
+    decisão pt-BR do BLOG-1 não tem D-N formal no spec Decisions, que
+    usa bullets; plan Phase 2 covers registra literalmente como
+    "decisão pt-BR (D do BLOG-1)").
+  - `test_diretorio_test_nao_publicado`, `test_diretorio_docs_nao_publicado`,
+    `test_compose_yaml_nao_publicado` → `# @spec (exclude _config.yml)`
+    (Coverage lista essas linhas como "Exclude do _config.yml", sem FR/AC
+    correspondente — são invariantes de config, não requisitos numerados).
+  - `test_diretorio_draft_nao_publicado` → `# @spec AC-2.1 (exclude _config.yml)`
+    (esse tem AC-2.1 formal — indireto — em Coverage; o marker preserva a
+    origem da linha em `exclude:`).
+- **Gate full** `docker compose run --rm site bash tools/check.sh` —
+  validador `26/29/0/0` (idem baseline), htmlproofer `16 arquivos / 0
+  falhas`, `site_test.rb` **22 runs / 37 assertions / 6 failures / 0
+  errors / 0 skips** (idem baseline `22/37/6/0`). As 6 falhas são
+  exatamente as mesmas do baseline, com os mesmos nomes de teste:
+  `test_tags_tem_pagina_por_tag_usada`, `test_tempo_de_leitura_visivel_no_post`,
+  `test_post_tecnico_tem_highlight_e_mermaid`,
+  `test_home_lista_posts_em_ordem_cronologica_decrescente`,
+  `test_imagem_do_post_e_servida_e_referenciada`,
+  `test_indice_de_busca_lista_os_tres_posts_ficticios`. Invariante estrita
+  do Amendment 2026-09-29 satisfeita — resolve implicitamente a Deviation
+  plan-affecting daquela data (BLOG-2 D-2 continua responsável por curar
+  as 6 falhas depois de BLOG-3 fechar).
+- **Sintaxe:** `ruby -wc test/site_test.rb` → `Syntax OK`.
+- **Phase 3 (cross-check):**
+  - `grep -c "# @spec" test/*.rb` → 22 + 26 = 48
+  - `grep -c "def test_" test/*.rb` → 22 + 26 = 48
+  - Igualdade: 48 = 48 (invariante "diff só de comentários" preservada).
+  - Walkthrough manual da matriz Coverage do plan × grep `# @spec` — cada
+    AC listado como "testado" aparece em ao menos uma linha; casos
+    combinados (AC-11.1 na vfm:23, AC-19.1+19.2 na site:147) preservados.
+    Nenhum AC "testado" ficou órfão. Nota: Coverage referencia números
+    de linha pré-tag (originais); pós-tag as linhas mudam, mas o
+    mapeamento (arquivo:def_name → AC) permanece — o Amendment 2026-09-29
+    já explicitou que a Coverage não é reescrita nesta issue.
+- **Diff acumulado (BLOG-3):** `git diff --stat test/` → 48 insertions,
+  0 deletions, 2 arquivos. Filtragem `git diff | grep -E "^[+-]" | grep
+  -vE "^[+-]{3} |^[+-]\s*$|^[+-]\s*#"` → saída vazia (zero linhas
+  não-comentário alteradas).
+- **Não feito nesta sessão** (pendente do autor):
+  - Invocação formal da skill `auditoria-de-impacto` sobre o diff.
+  - Commit único de BLOG-3 (as três fases num commit só, conforme
+    plan Phase 1 "commit único da Fase" — o Amendment não repartiu).
+
+### 2026-09-29 — BLOG-3 Phase 1: tag de `test/validate_front_matter_test.rb`
+
+- **Gate reentrada:** Amendment 2026-09-29 no plan.md desbloqueou BLOG-3
+  (opção (b) do autor). Precondição formal satisfeita, sem CR aberto.
+- **Contagem real do arquivo:** 26 métodos `test_*` (24 unit + 2 CLI). Plan
+  Context registra "26 métodos (25 unit + 2 CLI)" e Phase 1 Done-when
+  registra `grep -c "# @spec" = 25`. Ambas são off-by-one em relação ao
+  arquivo. Tratado como **local** (não plan-affecting): intent inequívoco
+  ("tag em cada `def test_*`"); aplicadas 26 tags (uma por método), e o
+  cross-check da Fase 3 usa igualdade `grep tags = grep defs` (26 = 26) em
+  vez do literal `= 25` do plan. Registrado abaixo em Deviations.
+- **Green (aplicação):** inserido `# @spec …` na linha imediatamente antes
+  de cada `def test_*`, indent-2, sem linha em branco entre a tag e o `def`
+  (Strategy). CLI usa marcador `(CLI)`; tests de regressão da auditoria
+  usam marcador `(auditoria-de-impacto)` (sem FR prefixo, conforme
+  Strategy). Mapeamento AC→teste segue a matriz Coverage do plan.
+- **Gate targeted:** `docker compose run --rm site bundle exec ruby -Itest
+  test/validate_front_matter_test.rb` — **26 runs, 29 assertions, 0 failures,
+  0 errors, 0 skips** (idêntico à baseline).
+- **Diff:** `git diff --stat test/validate_front_matter_test.rb` — 26
+  insertions, 0 deletions. Regex `^[+-]` filtrado por `^[+-]\s*#` +
+  cabeçalho vazio → **zero linhas não-comentário alteradas**. Nenhum `def`,
+  `assert*`, `refute*`, `require`, `class` ou constante mudou.
+- **Sintaxe:** `docker compose run --rm site ruby -wc
+  test/validate_front_matter_test.rb` — `Syntax OK`.
+- **Auditoria de impacto** e commit pendentes — ver Blockers/Next.
+
 ### 2026-09-29 — BLOG-3: transição de pass, baseline e handoff a plan
 
 - **Gate para ssd-task (BLOG-3):** `## Plan — BLOG-3` presente em plan.md;
@@ -399,6 +509,71 @@ Log abaixo.
 - [x] Suíte de testes (gate completo) — `docker compose run --rm site bash tools/check.sh` — mesmos números do Green acima
 - [x] Análise estática / lint — nenhum `.rb`/`.sh` alterado nesta etapa
 - [x] Artefato visível — conferência visual via `tools/run.sh` + `curl`: home (200, lista os 3 posts), `/posts/api-tarefas-ruby/` (200, link do repositório), `/categories/ci%C3%AAncia-de-dados/` (200, lista os posts da categoria), `/tags/ruby/` (200), `/about/` (200), `/assets/js/data/search.json` (200, contém o post técnico)
+
+### 2026-09-29 — BLOG-3 Phases 2 e 3
+
+- **HEAD (working tree):** `e1cb549` + Phases 1+2+3 uncommitted (dois
+  arquivos, `test/validate_front_matter_test.rb` e `test/site_test.rb`,
+  48 insertions totais)
+- **Red — n/a** (substituto: baseline + igualdade estrita, per Amendment
+  2026-09-29).
+- **Green (full — per Amendment):** `docker compose run --rm site bash
+  tools/check.sh`
+  - validador: **26 runs / 29 assertions / 0 failures / 0 errors / 0
+    skips** (idem baseline)
+  - htmlproofer: **16 arquivos / 0 falhas** (idem baseline; `Ran on 16
+    files!` + `HTML-Proofer finished successfully`)
+  - site_test.rb: **22 runs / 37 assertions / 6 failures / 0 errors / 0
+    skips** (idem baseline)
+  - Conjunto exato de 6 falhas confirmado por nome de teste:
+    `test_tags_tem_pagina_por_tag_usada`,
+    `test_tempo_de_leitura_visivel_no_post`,
+    `test_post_tecnico_tem_highlight_e_mermaid`,
+    `test_home_lista_posts_em_ordem_cronologica_decrescente`,
+    `test_imagem_do_post_e_servida_e_referenciada`,
+    `test_indice_de_busca_lista_os_tres_posts_ficticios` — idem baseline.
+- **Cross-check da tag (Phase 3):**
+  - `grep -c "# @spec" test/site_test.rb` → 22
+  - `grep -c "# @spec" test/validate_front_matter_test.rb` → 26
+  - `grep -c "def test_" test/site_test.rb` → 22
+  - `grep -c "def test_" test/validate_front_matter_test.rb` → 26
+  - Totais: 48 tags = 48 defs (invariante "1 tag por método")
+- **Análise estática (arquivos tocados):** `docker compose run --rm site
+  ruby -wc test/site_test.rb test/validate_front_matter_test.rb` →
+  `Syntax OK` (ambos)
+- **Diff acumulado:** `git diff --stat test/` → 48 insertions(+),
+  0 deletions, 2 arquivos. Filtragem
+  `git diff | grep -E "^[+-]" | grep -vE "^[+-]{3} |^[+-]\s*$|^[+-]\s*#"`
+  → saída vazia. Nenhum `def`, `assert*`, `refute*`, `require`, `class`
+  ou constante mudou.
+- **Auditoria de impacto:** pendente (pré-commit; skill formal não
+  invocada nesta sessão — checagem equivalente por grep registrada acima)
+- **Artefato visível:** n/a (comentários no código)
+
+### 2026-09-29 — BLOG-3 Phase 1
+
+- **HEAD (working tree):** `e1cb549` + Phase 1 uncommitted
+- **Red — n/a** (substituto: baseline abaixo). Rename mecânico de comentários
+  não tem asserção de comportamento a falhar; o que se evita é churn
+  acidental de teste, capturado pela igualdade estrita de contagem
+  pré/pós.
+- **Green (targeted, per Amendment):** `docker compose run --rm site
+  bundle exec ruby -Itest test/validate_front_matter_test.rb`
+  → 26 runs, 29 assertions, 0 failures, 0 errors, 0 skips
+  (**idem baseline** `26/29/0/0`)
+- **Cross-check da tag:** `grep -c "# @spec"
+  test/validate_front_matter_test.rb` → 26; `grep -c "def test_"
+  test/validate_front_matter_test.rb` → 26 (bate).
+- **Análise estática (arquivo tocado):** `docker compose run --rm site
+  ruby -wc test/validate_front_matter_test.rb` → `Syntax OK`
+- **Diff:** `git diff --stat` → `26 insertions(+)`; filtragem de `^[+-]`
+  por `^[+-]\s*#` deixa 0 linhas não-comentário. Nenhum `def`, `assert*`,
+  `refute*`, `require`, `class` ou constante mudou.
+- **Full suite (check.sh):** ainda não rerun (não obrigatório para Fase 1
+  targeted; a igualdade estrita `26/29/0/0` no validador basta). Será
+  rodada no fim da Fase 2 conforme Amendment.
+- **Auditoria de impacto:** pendente (pré-commit)
+- **Artefato visível:** n/a (comentários no código)
 
 ### 2026-09-29 — BLOG-3 Baseline
 
