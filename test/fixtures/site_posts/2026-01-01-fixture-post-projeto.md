@@ -1,5 +1,5 @@
 ---
-title: "[RASCUNHO] Fixture de post de projeto"
+title: "Fixture de post de projeto"
 date: 2026-01-01 10:00:00 -0300
 categories: [Desenvolvimento]
 tags: [fixture]
