@@ -39,7 +39,7 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   - [x] Cheque 1 (AC-17.2): `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/robots.txt` → **200**. Conteúdo: `User-agent: *\n\nDisallow: /norobots/\n\nSitemap: https://ebenezer-dorneles.github.io/sitemap.xml` (robots padrão do Jekyll — AC-17.2 só exige "existe", não restritividade; indexação é inibida pelo meta robots da home — cheque 3).
   - [x] Cheque 2 (AC-17.1): `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/sitemap.xml` → **200**. Sitemap XML bem-formado com URLs do post `etl-dados-prf` (lastmod `2026-09-29T10:00:00-03:00`) e páginas de taxonomia (`/categories/`). O plugin `jekyll-sitemap` não omite URLs com `site.noindex` — o controle de indexação é pelo meta robots.
   - [x] Cheque 3 (AC-18.1): `curl -s https://ebenezer-dorneles.github.io/ | grep -c '<meta name="robots" content="noindex, nofollow">'` → **1** (literal presente no HTML da home, gerado pelo `_includes/metadata-hook.html` quando `site.noindex: true`).
-  - [ ] Cheque 4 (AC-6.1 + AC-8.1 + `fetch-depth: 0`): typo-fix de 1 linha em `_posts/2026-09-29-etl-dados-prf.md`, commit (`fix(content): typo em etl-prf post`), push, aguardar run, `curl -s https://ebenezer-dorneles.github.io/posts/etl-dados-prf/ | grep -c 'Last updated'` → ≥ 1
+  - [x] Cheque 4 (AC-6.1 + AC-8.1 + `fetch-depth: 0`): typo-fix em `_posts/2026-09-29-etl-dados-prf.md` (commit `ccb5dd8`), merge via PR #2 (padrão do autor; `origin/main` → `f0f0c9c` como merge commit), workflow disparou automaticamente, deploy publicou. **Literal real pt-BR é "Atualizado" (não "Last updated")**: `curl -s https://ebenezer-dorneles.github.io/posts/etl-dados-prf/ | grep -oE 'Atualizado\s*<time[^>]*>[^<]+</time>'` → `Atualizado <time data-ts="1790983055" ...> 02/10/2026 </time>` (count=1); `article:modified_time` = `2026-10-02T20:17:35-03:00` (count=1). Front matter não tem `last_modified_at` explícito → prova direta de que `_plugins/posts-lastmod-hook.rb` executou com git log completo, confirmando `fetch-depth: 0` no CI. AC-6.1 + AC-8.1 provados.
   - [ ] Cheque 5 (AC-6.2 — `paths-ignore`): edit só em `README.md` (uma linha), commit (`docs(readme): minor copy edit`), push, inspecionar aba Actions e confirmar que nenhum run novo foi disparado (ou via `gh run list -L 2` se `gh` disponível)
   - [x] Cheque adicional (AC-18.3 parte "repo HTTP 200"): `curl -s -o /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/etl-prf-data` → **200** (2026-10-02; habilitado por D-6, concluído 2026-09-29); `https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io` → **200**.
   - [ ] Registrar comando + resultado literal de cada cheque em `## Verification → Phase 3 — Verification externa (D-5)`
@@ -187,6 +187,32 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   recorrente, atualizar a seção "Review & code standards" do plan em
   revisão futura. Para esta pass (Phase 2), o commit segue o padrão
   antigo (commit do agente em `blog-1-mvp`, push manual).
+  · class: local
+  · action: continued
+- 2026-10-02 — Padrão PR via GitHub web confirmado como norma operacional
+  **retroativamente**: inspeção de `git log origin/main` revelou que também
+  o commit `73382e2` (Phase 1 — D-2) chegou em `main` via `Merge pull
+  request #1 from ebenezer-dorneles/blog-1-mvp` (merge commit `cd6c18c`),
+  não via push direto `blog-1-mvp:main` como eu havia inferido. O
+  `bb10890` + `fe0ef64` + `ccb5dd8` (Phase 2 + task + typo-fix) chegou via
+  PR #2 (merge commit `f0f0c9c`). Já fez isso 2x = padrão. Supera a
+  Deviation anterior (que registrava "exploração"); passa a ser decisão
+  operacional estabelecida. Agente faz commits em `blog-1-mvp` e aguarda
+  autor abrir/mergear PR. Plan "Review & code standards" fica para
+  atualizar numa revisão futura do spec.
+  · class: local
+  · action: continued
+- 2026-10-02 — Cheque 4 (AC-8.1): plan sugeria `grep -c 'Last updated'`
+  na página renderizada, mas o Chirpy traduz esse label via
+  `_data/locales/pt-BR.yml` → o literal real em pt-BR é "Atualizado"
+  (seguido do `<time>` com `data-ts`). O literal "Last updated" dá
+  count 0 pelo motivo errado (locale, não ausência da feature). Grep
+  substituído por `grep -oE 'Atualizado\s*<time[^>]*>[^<]+</time>'`
+  + verificação de que `data-ts` do "Atualizado" é distinto do
+  `data-ts` do "Postado em" (prova que o `_plugins/posts-lastmod-hook.rb`
+  executou com git log completo — AC-8.1 e `fetch-depth: 0` provados
+  pelo motivo certo). Intent do plan preservada; só muda o literal
+  esperado para a locale real do site.
   · class: local
   · action: continued
 
