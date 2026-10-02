@@ -28,38 +28,51 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   - [x] Refactor: dois `find`s separados em `test_post_tecnico_tem_highlight_e_mermaid` (Rouge e Mermaid independentes); marcador de Mermaid trocado de `language-mermaid` (que o Rouge gera sem `mermaid.min.js` ativo) para `mermaid.min.js` + asserção adicional de `project-repo` para provar AC-19.3 explicitamente — correção pós-auditoria de impacto
   - [x] Done when: `tools/check.sh` → validador `26/29/0/0`, htmlproofer `16 arquivos / 22 links / 0 falhas`, `site_test.rb` **`22/54/0/0`** (invariante do plan `22/≥37/0/0` satisfeita com folga); `grep -c "# @spec" test/site_test.rb` = 22; `grep -c "def test_" test/site_test.rb` = 22; `grep -nE "RASCUNHO|analise-exploratoria|api-tarefas-ruby|visualizando-pipelines" test/site_test.rb` vazio; `ruby -wc` `Syntax OK`
   - [x] Auditoria de impacto formal via skill — veredito inicial "CORRIGIR ANTES" (1 buraco real em AC-19); correção aplicada e re-rodado; buraco #2 (tag com espaço) registrado como follow-up fora do escopo
-- [ ] **Phase 2 — Renomear fixtures sem `[RASCUNHO]` (D-3)**
-  - [ ] Red: `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → esperado 2 no estado atual; simulação local em shell throwaway: `sed -i 's/^noindex: true/noindex: false/' _config.yml` + `docker compose run --rm site bundle exec ruby tools/validate-front-matter.rb` deve reprovar via `check_draft_guard`; reverter imediatamente `_config.yml` via `git checkout`
-  - [ ] Green: editar `test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md:2` removendo `[RASCUNHO] ` do `title`; idem `2026-01-02-fixture-post-comum.md:2`; nenhuma outra edição
-  - [ ] Refactor: nada
-  - [ ] Done when: `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → 0; `tools/check.sh` segue `22/≥37/0/0`; simulação pós-rename (mesma sed throwaway) agora passa no validador — prova precondição real do flip
-  - [ ] Auditoria de impacto (foco: "rename de 2 strings nos títulos das fixtures; prova de que check_draft_guard só atua pré-flip")
-- [ ] **Phase 3 — Verification externa pré-flip (D-5)** · pendente até Phase 2 fechar + autor executar `git push origin main`
+- [x] **Phase 2 — Renomear fixtures sem `[RASCUNHO]` (D-3)**
+  - [x] Red: grep baseline = 2 (`fixture-post-projeto.md:1`, `fixture-post-comum.md:1`); simulação `sed -i 's/^noindex: true/noindex: false/' _config.yml` + `docker compose run --rm site bash tools/check.sh` → validador reprovou ambas as fixtures com mensagem exata `./_posts/<fixture>: title: post [RASCUNHO] exige noindex: true em _config.yml`; `_config.yml` revertido por `git checkout` + `diff` com backup = idêntico
+  - [x] Green: títulos renomeados em `test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md:2` e `2026-01-02-fixture-post-comum.md:2` (removido o prefixo `[RASCUNHO] `, resto do YAML intocado, slugs preservados)
+  - [x] Refactor: nada
+  - [x] Done when: grep `[RASCUNHO]` em fixtures → 0; `tools/check.sh` → validador `26/29/0/0`, htmlproofer `16/0`, `site_test.rb` `22/54/0/0` (mesmas contagens da Phase 1); redo da simulação sed throwaway pós-rename → validador passa, única falha é `test_home_tem_meta_robots_noindex` (comportamento esperado pós-flip, AC-18.2 — não é regressão); `_config.yml` revertido
+  - [x] Auditoria de impacto formal — veredito "PRONTO PARA PR" (zero consumidores do campo `title` das fixtures em `test/`, `tools/`, `_config.yml`, `_includes/`, `_layouts/`, `_data/`; zero efeito irreversível alcançável)
+- [ ] **Phase 3 — Verification externa pré-flip (D-5)** · precondição operacional satisfeita 2026-10-02 (`origin/main` criado em `73382e2`); aguarda a próxima sessão iniciar
+  - [ ] Pré-checagem: `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/` → 200 (confirmar deploy do workflow concluído verde). Se 404, aguardar.
+  - [ ] Cheque 1 (AC-17.2): `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/robots.txt` → 200
+  - [ ] Cheque 2 (AC-17.1): `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/sitemap.xml` → 200
+  - [ ] Cheque 3 (AC-18.1): `curl -s https://ebenezer-dorneles.github.io/ | grep -c '<meta name="robots" content="noindex, nofollow">'` → 1
+  - [ ] Cheque 4 (AC-6.1 + AC-8.1 + `fetch-depth: 0`): typo-fix de 1 linha em `_posts/2026-09-29-etl-dados-prf.md`, commit (`fix(content): typo em etl-prf post`), push, aguardar run, `curl -s https://ebenezer-dorneles.github.io/posts/etl-dados-prf/ | grep -c 'Last updated'` → ≥ 1
+  - [ ] Cheque 5 (AC-6.2 — `paths-ignore`): edit só em `README.md` (uma linha), commit (`docs(readme): minor copy edit`), push, inspecionar aba Actions e confirmar que nenhum run novo foi disparado (ou via `gh run list -L 2` se `gh` disponível)
+  - [ ] Cheque adicional (AC-18.3 parte "repo HTTP 200"): `curl -s -o /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/etl-prf-data` → 200 (habilitado por D-6, concluído 2026-09-29)
+  - [ ] Registrar comando + resultado literal de cada cheque em `## Verification → Phase 3 — Verification externa (D-5)`
 - [ ] **Phase 4 — Supersede subitens do Step 6 do BLOG-1 em `task.md` (D-10)** · pendente até Phase 3 fechar
 
 ## State Handover
 
-- **Done nesta sessão (2026-10-02 — Phase 1 fechada):**
-  - **Red** confirmado por baseline (6 falhas por slug morto já documentadas em `## Verification → BLOG-2 Fase técnica Baseline`) + experimento controlado: cópia de `_posts/2026-09-29-etl-dados-prf.md` para scratchpad + `git mv` para fora de `_posts/` + rebuild `check.sh` → `test_post_tecnico_tem_highlight_e_mermaid` falhou com mensagem **nova** (`"nenhum post publicado contém bloco Mermaid (\`language-mermaid\`)"`), não a legada por slug. Restore por `git mv` reverso + `diff` com backup = idêntico.
-  - **Green** aplicado em `test/site_test.rb`: 6 asserções reescritas + `require "json"` + helper `published_posts` extraído (5 ocorrências; plan exigia ≥ 3). Diff: +64/-29 linhas, 1 arquivo.
-  - **Auditoria de impacto** formal rodada; veredito inicial "CORRIGIR ANTES" por 1 buraco real em AC-19 (teste exigia Rouge+Mermaid no mesmo post, perdendo cobertura de AC-19.1 em cenário sem Mermaid; `language-mermaid` sozinho não prova `mermaid: true` ativo porque o Rouge gera essa classe mesmo sem o JS). **Correção aplicada**: dois `find`s separados (Rouge via `class="highlight"`; Mermaid via `mermaid.min.js` — prova que front matter tem `mermaid: true` **e** `_includes/js-selector.html` sombreado funciona); asserção adicional de `class="project-repo` para provar AC-19.3 explicitamente.
-  - **Gate final** (`docker compose run --rm site bash tools/check.sh`): validador `26/29/0/0`; htmlproofer `16 arquivos / 22 links / 0 falhas`; `site_test.rb` **`22/54/0/0`**. Invariante do plan `22/≥37/0/0` satisfeita com folga; `ruby -wc` `Syntax OK`.
-  - **Phase 2 decomposta** (tier M — próxima fase aberta).
-- **Next (Phase 2 — D-3):**
-  - Red: `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → espera 2; simulação local throwaway: `sed -i 's/^noindex: true/noindex: false/' _config.yml` + `docker compose run --rm site bundle exec ruby tools/validate-front-matter.rb` deve reprovar via `check_draft_guard` sobre as fixtures symlinkadas pelo `check.sh`; reverter `_config.yml` por `git checkout` imediatamente.
-  - Green: editar título das duas fixtures em `test/fixtures/site_posts/` removendo prefixo `[RASCUNHO] ` (preservar o resto do YAML).
-  - Done when: grep → 0; `check.sh` segue `22/54/0/0` (sem mudança de contagem — fixtures só mudam título, não front matter que o teste leia); simulação pós-rename passa no validador.
-  - Pré-commit: `auditoria-de-impacto` com foco em "rename de 2 strings nos títulos das fixtures".
+- **Done nesta sessão (2026-10-02 — Phase 2 fechada; precondição da Phase 3 satisfeita):**
+  - **Red** (Phase 2): simulação local throwaway com `sed -i 's/^noindex: true/noindex: false/' _config.yml` + `docker compose run --rm site bash tools/check.sh` reprovou ambas as fixtures via `check_draft_guard` com a mensagem exata esperada. `_config.yml` revertido por `git checkout` + `diff` com backup idêntico.
+  - **Green** (Phase 2): rename dos títulos em `test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md:2` e `2026-01-02-fixture-post-comum.md:2` — prefixo `[RASCUNHO] ` removido; resto do YAML intocado; slugs de arquivo preservados.
+  - **Done when** (Phase 2): `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → 0; `tools/check.sh` segue verde (`26/29/0/0` validador; htmlproofer `16/0`; `site_test.rb` `22/54/0/0` — mesmas contagens da Phase 1). **Redo da simulação sed throwaway pós-rename**: validador passou (não disparou mais `check_draft_guard`); única falha foi `test_home_tem_meta_robots_noindex` — comportamento esperado pós-flip (AC-18.2), não é regressão. **D-3 provado como precondição real do flip.**
+  - **Auditoria de impacto formal** (Phase 2): veredito "PRONTO PARA PR" — zero consumidores do campo `title` das fixtures em `test/`, `tools/`, `_config.yml`, `_includes/`, `_layouts/`, `_data/`; zero efeito irreversível alcançável; `site_test.rb` só lê o slug dos posts, não o título.
+  - **Infra externa — precondição Phase 3 satisfeita** (fora do SSD, feita entre as sessões):
+    - Push de `blog-1-mvp` subiu ao `origin/blog-1-mvp` (inclui commit `73382e2` da Phase 1).
+    - `origin/main` foi criado em `73382e2` (via push `blog-1-mvp:main` ou web do GitHub); workflow `pages-deploy.yml` deve ter disparado automaticamente.
+    - Confirmação do primeiro run verde em https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io/actions **ainda não validada** — próxima sessão começa pela pré-checagem (`curl /`) para decidir se Phase 3 pode começar.
+  - **Phase 3 decomposta** (tier M — próxima fase aberta): 7 sub-itens cobrindo pré-checagem + 5 cheques do D-5 + AC-18.3 "repo 200" + registro em Verification.
+  - **Phase 2 commit**: será feito ao final desta sessão (mesmo padrão da Phase 1 — pendente de autorização do autor).
+- **Next (Phase 3 — D-5, Verification externa):**
+  - Pré-checagem: `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/` — se 200, prosseguir; se 404, aguardar workflow finalizar.
+  - 5 cheques `curl` + 2 edits de prova (typo-fix em `_posts/` e edit em `README.md`) + registro literal em `## Verification`.
+  - Cada edit (passo 4 e passo 5) exige commit + push à `main` → coordenação com autor (padrão: commit do agente + push por fora).
+  - Pré-commit do typo-fix (passo 4): `auditoria-de-impacto` com foco em "edit intencional de 1 linha no corpo do post, prova de `fetch-depth: 0`".
 - **Blockers / open decisions:**
-  1. **Phase 3 continua bloqueada** até autor executar `git push origin main` (ou merge de `blog-1-mvp` em `main`). Phase 2 pode ser feita local inteira primeiro.
-  2. **Commit pós-Phase 1 pendente** — esta sessão terminou com working tree alterada (`test/site_test.rb`, `docs/specs/blog-portfolio/task.md`); aguarda decisão do autor sobre commit (padrão BLOG-1/BLOG-3: commit do agente). Sugestão de mensagem: `test(blog-portfolio): reescreve test/site_test.rb para invariantes estruturais (D-2)`.
+  1. **Confirmação do primeiro deploy verde**: antes da pré-checagem, autor pode querer olhar a aba Actions do GitHub e confirmar que o workflow do `main` fechou verde.
+  2. **Commit pós-Phase 2 pendente** — working tree alterada (`test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md`, `2026-01-02-fixture-post-comum.md`, `docs/specs/blog-portfolio/task.md`). Sugestão: `test(blog-portfolio): renomeia fixtures sem [RASCUNHO] (D-3)`.
 - **Watch out:**
   - Todo comando Ruby/Jekyll roda **dentro** do container (`docker compose run --rm site …`); Ruby 4.0.6 do host geraria lock com `BUNDLED WITH` 4.x.
-  - `test/site_test.rb` faz `skip` se `_site/` não existir: Phase 2 só edita fixtures (titles) → não exige rebuildar antes do targeted `site_test.rb`, mas o full `check.sh` builda implicitamente.
-  - **Follow-up registrado como Deviation local (não bloqueante)**: `test_tags_tem_pagina_por_tag_usada` quebraria se um post declarar `tags: ["machine learning"]` (espaço) — Jekyll gera `tags/machine-learning/`, teste busca `tags/machine learning/index.html` literal. FR-1 AC-1.7 proíbe maiúscula/acento mas não espaços. Fora do escopo da Phase 1; registrado para follow-up (opções: validador proibir espaços, ou aplicar slugify no teste).
-  - Nome do método `test_indice_de_busca_lista_os_tres_posts_ficticios` continua contradizendo a invariante estrutural pós-D-2. Rename segue em Deferred do plan (fora do escopo do BLOG-2 Fase técnica).
-  - Fixtures seguem com `[RASCUNHO]` no título até Phase 2 (hoje inofensivo — `noindex: true` ativa; `check_draft_guard` só reprova quando `noindex` ≠ true).
-  - Push `blog-1-mvp` → `main` continua pendente da decisão do autor. HEAD local: `94ba825` + commits do baseline (`750a3d4`) + edits uncommitted da Phase 1 (`test/site_test.rb` + `task.md`).
+  - **Phase 3 passo 4 (typo-fix)**: o edit tem que ser visível no corpo renderizado para o `grep "Last updated"` fechar — editar algo que o Markdown realmente renderize (ex.: um parágrafo), não só whitespace ou front matter.
+  - **Phase 3 passo 5 (README.md)**: a prova de `paths-ignore` depende do commit **só** mexer no `README.md`; se qualquer outro arquivo for incluído, o workflow dispara e a prova falha. Fazer com `git add README.md` + `git commit`, não `git add -A`.
+  - **Follow-up registrado como Deviation local da Phase 1 (não bloqueante)**: `test_tags_tem_pagina_por_tag_usada` quebraria se um post declarar `tags: ["machine learning"]` (espaço) — Jekyll gera `tags/machine-learning/`, teste busca `tags/machine learning/index.html` literal. FR-1 AC-1.7 proíbe maiúscula/acento mas não espaços. Fora do escopo do BLOG-2 Fase técnica.
+  - Nome do método `test_indice_de_busca_lista_os_tres_posts_ficticios` continua contradizendo a invariante estrutural pós-D-2. Rename segue em Deferred do plan.
+  - **PR vs. commit direto**: desta sessão em diante o autor pode preferir fluxo PR (GitHub web) para merges em `main`. O plan registra "autor único, sem PR" — mudança operacional não é bloqueante, mas vale registrar como deviation local se virar hábito.
 
 ## Deviations
 
@@ -151,6 +164,28 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   é um estado que o teste antigo também não cobria — listava slugs fixos
   sem espaço). Registrado para quando outra issue tocar `site_test.rb` ou
   o validador.
+  · class: local
+  · action: continued
+- 2026-10-02 — Precondição operacional da Phase 3 satisfeita entre as sessões
+  da Phase 1 e da Phase 2: autor executou push de `blog-1-mvp` para o remote
+  e criação de `origin/main` em `73382e2`. A spec/plan dizem "autor executa
+  `git push origin main` ou merge de `blog-1-mvp` em `main`" — na prática
+  foi push direto de `blog-1-mvp:main` (o `main` local está em `2f9a536`,
+  anterior a praticamente todo o BLOG-1, e não foi usado como fonte). Nenhum
+  conteúdo divergente: `origin/main` == `origin/blog-1-mvp` == `73382e2`.
+  Dispara automaticamente o primeiro run do `pages-deploy.yml` (filtro
+  `branches: [main, master]`). Confirmação do run verde fica para o
+  primeiro passo da Phase 3 (pré-checagem via `curl /`).
+  · class: local
+  · action: continued
+- 2026-10-02 — Fluxo operacional de merge: autor explorou abrir PR via
+  GitHub web em vez de commit direto do agente para merges em `main`. O
+  plan registra "autor único, sem PR" como padrão de revisão (plan.md:90,
+  reiterado em BLOG-3 e BLOG-2 Fase técnica). Mudar para PR não é bloqueante
+  e preserva o conteúdo versionado — só muda o veículo. Se virar padrão
+  recorrente, atualizar a seção "Review & code standards" do plan em
+  revisão futura. Para esta pass (Phase 2), o commit segue o padrão
+  antigo (commit do agente em `blog-1-mvp`, push manual).
   · class: local
   · action: continued
 
@@ -594,6 +629,67 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   - Diff final: `test/site_test.rb` +64/-29 em 1 arquivo; zero efeito irreversível alcançável; zero código de produção tocado.
 - **Phase 2 decomposta** (per tier M — só a próxima fase aberta): 5 sub-itens na Checklist cobrindo Red/Green/Done when/Auditoria para o rename das 2 fixtures.
 
+### 2026-10-02 — BLOG-2 Fase técnica Phase 2: rename das fixtures sem `[RASCUNHO]` (D-3)
+
+- **Infra externa (entre Phase 1 e Phase 2):** autor confirmou push de
+  `blog-1-mvp` → `origin/blog-1-mvp` + criação de `origin/main` em `73382e2`
+  (via push `blog-1-mvp:main` ou GitHub web). `pages-deploy.yml` deve ter
+  disparado o primeiro run; confirmação do run verde fica para a Phase 3
+  (pré-checagem via `curl /`). Branch default do remote é `blog-1-mvp`
+  (`origin/HEAD -> origin/blog-1-mvp`), não `main` — detalhe operacional
+  do GitHub, não afeta o filtro do workflow (`branches: [main, master]`).
+- **Red (simulação do flip):**
+  - `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` baseline → 2
+    (`fixture-post-projeto.md:1`, `fixture-post-comum.md:1`).
+  - Backup `_config.yml` → scratchpad; `sed -i 's/^noindex: true/noindex: false/' _config.yml` →
+    `grep -n "^noindex" _config.yml` confirmou `noindex: false` na linha 168.
+  - `docker compose run --rm site bash tools/check.sh` abortou com `set -eu`
+    no primeiro passo (validador), com saída literal:
+    - `./_posts/2026-01-01-fixture-post-projeto.md: title: post [RASCUNHO] exige noindex: true em _config.yml`
+    - `./_posts/2026-01-02-fixture-post-comum.md: title: post [RASCUNHO] exige noindex: true em _config.yml`
+  - **Red confirmado pelo motivo certo**: `check_draft_guard` dispara nas
+    fixtures symlinkadas pelo `tools/check.sh` (link_fixture_posts em
+    `tools/check.sh:18-25`) quando `_config.yml` tem `noindex: false`.
+  - Restore: `git checkout _config.yml` → `noindex: true` na linha 168;
+    `diff <backup> _config.yml` saída vazia → `restore idêntico`.
+- **Green (rename):**
+  - Edit em `test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md:2`:
+    `title: "[RASCUNHO] Fixture de post de projeto"` → `title: "Fixture de post de projeto"`.
+  - Edit em `test/fixtures/site_posts/2026-01-02-fixture-post-comum.md:2`:
+    `title: "[RASCUNHO] Fixture de post comum"` → `title: "Fixture de post comum"`.
+  - Nenhum outro campo YAML tocado (confirmado por `git diff`); slugs de
+    arquivo preservados (usados por `tools/check.sh:19-23`).
+- **Done when (gate normal + redo da simulação):**
+  - `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → 0/0 (ambos).
+  - `docker compose run --rm site bash tools/check.sh` (sem sed): validador
+    `26/29/0/0`; htmlproofer `16 arquivos / 0 falhas`; `site_test.rb` `22/54/0/0`
+    — mesmas contagens da Phase 1 (rename de título não é observável por
+    `site_test.rb`, que lê slug + estrutura HTML, não texto do título).
+  - **Redo da simulação sed throwaway pós-rename**: `sed -i 's/^noindex: true/noindex: false/' _config.yml`
+    + `docker compose run --rm site bash tools/check.sh` → validador passou
+    (não disparou mais `check_draft_guard`); htmlproofer verde; `site_test.rb`
+    `22/54/1/0` com única falha em `test_home_tem_meta_robots_noindex` —
+    comportamento esperado pós-flip (AC-18.2 verifica justamente ausência
+    de meta robots quando `noindex: false`); **não é regressão** da Phase 2.
+    `_config.yml` revertido imediatamente por `git checkout`.
+  - **D-3 provado como precondição real do flip**: antes do rename o
+    validador reprovava; depois do rename o validador passa; comportamento
+    binário conforme a decisão.
+- **Auditoria de impacto formal (skill):**
+  - Veredito: "PRONTO PARA PR".
+  - Grep exaustivo em `test/`, `tools/`, `_config.yml`, `_includes/`, `_layouts/`, `_data/`
+    por consumidores do campo `title` das fixtures renomeadas: **nenhum**.
+    `test/site_test.rb` lê slug (`posts/fixture-post-projeto/index.html`,
+    `posts/fixture-post-comum/index.html`), não título; `test/validate_front_matter_test.rb`
+    exercita `check_draft_guard` com fixtures in-memory separadas; `tools/validate-front-matter.rb`
+    é a lógica, não mudou.
+  - Zero efeito irreversível alcançável (diff puro de 2 linhas YAML em
+    fixtures de teste; fixtures nunca saem do gate local).
+  - Enumeração dos 6 estados em torno do rename concluída (todos cobertos
+    ou vacuamente verdadeiros).
+- **Phase 3 decomposta** (per tier M): 7 sub-itens cobrindo pré-checagem +
+  5 cheques do D-5 + AC-18.3 "repo 200" + registro em Verification.
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -739,6 +835,68 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   referência caso a escolha (b) do Blocker seja adotada
   (`22 runs / 37 assertions / 6 failures / 0 errors` como invariante do
   "diff só de comentários").
+
+### 2026-10-02 — BLOG-2 Fase técnica Phase 2 (D-3)
+
+- **HEAD (working tree):** `73382e2` + Phase 2 uncommitted
+  (`test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md` -1/+1,
+  `test/fixtures/site_posts/2026-01-02-fixture-post-comum.md` -1/+1).
+- **Red (simulação local throwaway):**
+  - Backup: `cp _config.yml` → scratchpad.
+  - Modificação: `sed -i 's/^noindex: true/noindex: false/' _config.yml` →
+    linha 168: `noindex: false`.
+  - `docker compose run --rm site bash tools/check.sh`:
+    - validador abortou com exit != 0 por `set -eu` no primeiro passo
+    - saída literal:
+      ```
+      ./_posts/2026-01-01-fixture-post-projeto.md: title: post [RASCUNHO] exige noindex: true em _config.yml
+      ./_posts/2026-01-02-fixture-post-comum.md: title: post [RASCUNHO] exige noindex: true em _config.yml
+      ```
+    - **Red pelo motivo certo**: `check_draft_guard` disparou nas 2 fixtures
+      symlinkadas, exatamente como o plan previu.
+  - Restore: `git checkout _config.yml`; `diff <backup> _config.yml` → saída vazia.
+- **Green (gate normal pós-rename):**
+  - `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` →
+    `test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md:0`,
+    `test/fixtures/site_posts/2026-01-02-fixture-post-comum.md:0`.
+  - `docker compose run --rm site bash tools/check.sh`:
+    - validador: **26 runs / 29 assertions / 0 failures / 0 errors / 0 skips**
+    - htmlproofer: **16 arquivos / 22 links internos / 0 falhas**
+    - `site_test.rb`: **22 runs / 54 assertions / 0 failures / 0 errors / 0 skips**
+  - Delta vs Phase 1: zero. Rename de título não é observável por `site_test.rb`.
+- **Done when (prova de precondição do flip):**
+  - Redo: `sed -i 's/^noindex: true/noindex: false/' _config.yml` +
+    `docker compose run --rm site bash tools/check.sh`:
+    - validador: **26 runs / 29 assertions / 0 failures / 0 errors / 0 skips**
+      (não dispara mais `check_draft_guard`)
+    - htmlproofer: **16 arquivos / 0 falhas**
+    - `site_test.rb`: **22 runs / 54 assertions / 1 failure / 0 errors / 0 skips**
+      - Única falha: `SiteTest#test_home_tem_meta_robots_noindex`
+        [test/site_test.rb:37] — meta robots `noindex, nofollow` ausente no
+        HTML (comportamento esperado pós-flip; AC-18.2 verifica isso quando
+        o flip real ocorrer). **Não é regressão da Phase 2.**
+  - Restore: `git checkout _config.yml` → `noindex: true`.
+  - **Conclusão**: D-3 é precondição real do flip (comportamento binário:
+    pré-rename reprova no validador, pós-rename passa).
+- **Cross-check:**
+  - `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → 0 (ambos)
+  - `grep -nE "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → saída vazia
+- **Análise estática:** n/a — mudança só em YAML (campo `title` em front matter);
+  nenhum `.rb` ou `.sh` alterado.
+- **Diff:** `git diff --stat test/fixtures/site_posts/` →
+  ```
+   test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md | 2 +-
+   test/fixtures/site_posts/2026-01-02-fixture-post-comum.md   | 2 +-
+   2 files changed, 2 insertions(+), 2 deletions(-)
+  ```
+- **Auditoria de impacto formal (skill):** veredito "PRONTO PARA PR"; grep
+  exaustivo por consumidores do `title` das fixtures em `test/`, `tools/`,
+  `_config.yml`, `_includes/`, `_layouts/`, `_data/` deu zero; 6 estados
+  degenerados enumerados, todos cobertos ou vacuamente verdadeiros.
+- **Artefato visível:** `_site/posts/fixture-post-{projeto,comum}/index.html`
+  passa a renderizar o novo título (sem `[RASCUNHO]`) — sem impacto em
+  nenhum teste, nem no site publicado (fixtures nunca entram no `_site/`
+  do CI de produção; symlinks efêmeros via trap em `tools/check.sh`).
 
 ### 2026-10-02 — BLOG-2 Fase técnica Phase 1 (D-2)
 
