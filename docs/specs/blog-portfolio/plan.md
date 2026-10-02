@@ -544,3 +544,380 @@ precisa ser rescrita agora.
 
 **Deferred (mantido).** BLOG-2 Fase técnica continua depois de BLOG-3 fechar;
 ordenação preservada.
+
+## Plan — BLOG-2 Fase técnica
+
+Spec revision: 4
+
+Escopo: **fase técnica do marco de saída do MVP** (spec `### BLOG-2 — Marco de
+saída do MVP → Fase técnica`), executável com `noindex: true` ainda ativo.
+Cobre D-2 (reescrever `test/site_test.rb` para invariantes estruturais,
+curando as 6 falhas herdadas de `686c5c0`), D-3 (renomear fixtures sem
+`[RASCUNHO]`), D-5 (Verification externa pré-flip, viável agora que D-6/D-7
+foram concluídos pelo autor em 2026-09-29) e D-10 (supersede formal dos
+subitens do Step 6 do BLOG-1 em `task.md`). **Fora do escopo:** o flip do
+`noindex` (Fase de conteúdo, gated em D-11); o merge/push de `blog-1-mvp` →
+`main`, que é decisão operacional do autor fora do pipeline SSD (D-5 depende
+do primeiro deploy ter ocorrido). Precondição: spec rev 4 aprovada (autor,
+2026-09-29, `## Approvals`), BLOG-3 fechado (`76cb996` + `e87db58`), zero CRs
+abertos.
+
+### Context
+
+Estado em 2026-10-02 (branch `blog-1-mvp`, HEAD `94ba825`):
+
+- **D-6 concluído** (2026-09-29): autor tornou `github.com/ebenezer-dorneles/etl-prf-data`
+  público. `_posts/2026-09-29-etl-dados-prf.md:8` agora resolve 200 para
+  leitor deslogado. Habilita AC-18.3 (parte "repo HTTP 200") para o post
+  real único e desbloqueia a Verification externa (D-5).
+- **D-7 concluído** (2026-09-29): autor trocou Pages → Source para GitHub
+  Actions no painel de `ebenezer-dorneles.github.io`. Workflow
+  `.github/workflows/pages-deploy.yml` (do starter, intocado desde o Step 1
+  do BLOG-1) agora é o publisher. Primeiro deploy pendente apenas de
+  push/merge.
+- **Gate local** `docker compose run --rm site bash tools/check.sh` em
+  `94ba825`: validador 26/29/0/0 (verde); htmlproofer 16 arquivos/0 falhas
+  (verde); **`test/site_test.rb` 22/37/6/0** — 6 falhas herdadas desde
+  `686c5c0` (remoção dos posts fictícios): `test_tags_tem_pagina_por_tag_usada`,
+  `test_tempo_de_leitura_visivel_no_post`, `test_post_tecnico_tem_highlight_e_mermaid`,
+  `test_home_lista_posts_em_ordem_cronologica_decrescente`,
+  `test_imagem_do_post_e_servida_e_referenciada`,
+  `test_indice_de_busca_lista_os_tres_posts_ficticios`.
+- **Tags `# @spec`** aplicadas no BLOG-3 (`76cb996`) — 48 no total, 22 em
+  `site_test.rb`. A reescrita D-2 **deve preservar o mapeamento AC→método**
+  (a asserção muda; a tag do AC que ela cobre não), per `## Plan — BLOG-3 →
+  ### Deferred` (plan.md:448).
+- **Fixtures**: `test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md`
+  (title `[RASCUNHO] Fixture de post de projeto`) e `2026-01-02-fixture-post-comum.md`
+  (title `[RASCUNHO] Fixture de post comum`). Hoje inofensivas porque
+  `check_draft_guard` em `tools/validate-front-matter.rb:118-125` só reprova
+  quando `_config.yml` tem `noindex` ≠ `true`. **D-3 desarma a armadilha
+  antes do flip** da Fase de conteúdo — e deve ser feito nesta Fase técnica
+  para a Fase de conteúdo poder flipar com commit único de 1 chave.
+- **Post real único** no `_posts/`: `2026-09-29-etl-dados-prf.md` com
+  `project: true`, `mermaid: true`, bloco Rouge (Python), e `image.path`
+  resolvendo pela convenção `media_subpath` (ver Execution Log do Step 5 do
+  BLOG-1 em task.md:349). As asserções reescritas por D-2 passam a rodar
+  contra ele + as duas fixtures symlinkadas.
+- **Workflow** (`.github/workflows/pages-deploy.yml`): mantém `fetch-depth:
+  0` (habilita hook `_plugins/posts-lastmod-hook.rb` do starter, premissa
+  de AC-8.1); `paths-ignore` com `.gitignore`, `README.md`, `LICENSE`
+  (premissa de AC-6.2). O workflow **não** invoca `tools/check.sh` — ainda
+  usa os passos inline `Build site` / `Test site` do starter; esta dívida
+  continua fora do escopo do BLOG-2 (ver `### BLOG-2 → Fora do escopo` da
+  spec:1080-1082).
+- **Checklist do Step 6 do BLOG-1** em `task.md` continua desmarcado (ver
+  bloco citação no topo de task.md:16-23). D-10 define a disciplina: na
+  decomposição deste plan pelo ssd-task, subitens viram
+  `- [ ] ~~item~~ (superseded by BLOG-2)` e `## Deviations` do task.md ganha
+  linha datada registrando o superseded.
+
+### Strategy
+
+- **D-2 (reescrita de `site_test.rb`)**: trocar asserções por slug fictício
+  (`analise-exploratoria-vendas`, `api-tarefas-ruby`, `visualizando-pipelines`
+  — todos removidos em `686c5c0`) por **invariantes estruturais** sobre o
+  `_site/` gerado, exatamente como D-2 na spec:650-668 descreve:
+  (a) home: ≥ 1 post, em ordem decrescente de `<time datetime="…">` extraída
+  do HTML (fixtures symlinkadas garantem ≥ 2 elementos sempre no gate local);
+  (b) para cada categoria usada por algum post em `_site/`, existe
+  `_site/categories/<slug>/index.html` listando-o — idem para tags;
+  (c) `assets/js/data/search.json` contém uma entrada por post **publicado**
+  (contagem via `JSON.parse`, não via slug);
+  (d) asserções de Rouge, Mermaid e imagem rodam contra o **primeiro post
+  que declara cada capacidade** — a cobertura hoje é o post ETL/PRF (Python
+  → Rouge, `mermaid: true` + bloco, imagem em `assets/img/posts/etl-dados-prf/`),
+  mas o teste descobre o post dinamicamente iterando `_site/posts/*/index.html`
+  para não voltar a quebrar quando o conteúdo evoluir.
+  As tags `# @spec` existentes (site_test.rb:25-173) permanecem no mesmo
+  método; só o corpo da asserção muda. Tags markers informais da deviation
+  2026-09-29 (`(decisão pt-BR)`, `(exclude _config.yml)`) ficam intactas.
+- **D-3 (renomear fixtures)**: `test/fixtures/site_posts/2026-01-01-…md:2`
+  (`title: "[RASCUNHO] Fixture de post de projeto"`) → `"Fixture de post de
+  projeto"`; idem para `2026-01-02-…md:2`. Slugs de arquivo preservados
+  (usados por `tools/check.sh:19-23` para symlink). Depois do rename,
+  `check_draft_guard` (validator) deixa de reprovar as fixtures se o flip
+  do `noindex` ocorrer na Fase de conteúdo. Nenhum teste cita os títulos
+  (confirmado por `grep -n "RASCUNHO" test/site_test.rb` esperado → vazio;
+  conferir no Red).
+- **D-5 (Verification externa pré-flip)**: 4 cheques, cada um com
+  comando + resultado esperado, a serem registrados pelo ssd-task em
+  `task.md ## Verification`. **Precondição operacional:** push/merge para
+  `main` já ocorreu e workflow finalizou verde (fora deste plan — ver
+  Deferred). Cheques: (i) `curl -s https://ebenezer-dorneles.github.io/robots.txt
+  -o /dev/null -w '%{http_code}\n'` → 200; (ii) idem para `/sitemap.xml` →
+  200; (iii) `curl -s https://ebenezer-dorneles.github.io/ | grep -c '<meta
+  name="robots" content="noindex, nofollow">'` → 1 (prova AC-18.1 no
+  deploy real); (iv) **prova de `fetch-depth: 0`**: commitar edit trivial
+  (ex.: typo-fix) no post ETL/PRF, push, aguardar run, confirmar pela URL
+  do post que a seção "Last updated" renderiza (`last_modified_at` ≠
+  `date`) — prova AC-8.1 e indiretamente AC-6.1; (v) **prova de
+  `paths-ignore`**: commitar edit só em `README.md`, push, confirmar via
+  `gh run list -L 1 --json path,headSha` (ou painel Actions) que **nenhum
+  run novo** foi disparado (prova AC-6.2). Resultado de cada curl/edit vai
+  em bloco literal no `task.md`.
+- **D-10 (supersede Step 6)**: pure bookkeeping no task.md. Fica como
+  disciplina a ssd-task aplicar na decomposição; não gera código. Phases
+  abaixo listam como fase final para rastreabilidade.
+- **O que não muda:** `tools/`, `_layouts/`, `_includes/`, `_data/`,
+  `_config.yml`, `.github/`, `_posts/` (exceto o typo-fix de prova de AC-8.1,
+  edit intencional de 1 linha). Nenhum arquivo do tema sombreado; nenhum
+  bump de gem; nenhuma mudança no gate script.
+
+### Tooling & commands
+
+| Check | Command | Scope | Why |
+|---|---|---|---|
+| Baseline (antes da Fase 1) | `docker compose run --rm site bash tools/check.sh` | validador + htmlproofer + site_test | registrar contagem exata em HEAD `94ba825`: esperado `26/29/0/0`, `16 arquivos/0 falhas`, `22/37/6/0`. Confirma herança das 6 falhas antes da reescrita D-2. |
+| Full test suite | `docker compose run --rm site bash tools/check.sh` | tudo | gate único. **Invariante Fase 1 pós-D-2:** `site_test.rb` passa a `22/≥37/0/0` (6 falhas curadas, assertion count pode crescer). |
+| Targeted (Fase 1 — D-2) | `docker compose run --rm site bundle exec ruby -Itest test/site_test.rb` | 22 runs | isola a reescrita sem rebuildar o site a cada iteração (usa `_site/` do último `tools/check.sh`). |
+| Targeted (Fase 2 — D-3) | `docker compose run --rm site bundle exec ruby tools/validate-front-matter.rb` + `docker compose run --rm site bash tools/check.sh` | validador + full gate | confirma que (a) rename das fixtures mantém validador verde (fixtures passam no front matter check) e (b) full gate segue `22/≥37/0/0`. |
+| Static analysis | `docker compose run --rm site ruby -wc test/site_test.rb` | `site_test.rb` após D-2 | pega typo de sintaxe que o minitest não acha até a asserção rodar. |
+| Lint / formatting | `bash -n tools/check.sh` | `check.sh` | precaução; nenhuma edição prevista. |
+| Artifact regeneration | `docker compose run -d --rm --service-ports site bash tools/run.sh -H 0.0.0.0` + `curl http://localhost:4000/` | preview local | opcional, só para inspeção visual pós-D-2 (home, categoria, tag, post ETL/PRF); não automatizado. |
+| Verification externa (D-5) | `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/{robots.txt,sitemap.xml}` + `curl -s https://ebenezer-dorneles.github.io/ \| grep -c 'noindex, nofollow'` + edit→push→`gh run list` | site publicado + Actions | prova AC-6.1, AC-6.2, AC-8.1, AC-17.1, AC-17.2, AC-18.1 no deploy real. Requer push ter ocorrido. |
+
+**Baseline a registrar em task.md antes da Fase 1:** contagem exata das três
+suites + conjunto nomeado das 6 falhas atuais em `site_test.rb` + hash do
+HEAD (`git rev-parse HEAD`).
+
+### Review & code standards
+
+- **Autor único, sem PR** (mesmo padrão do BLOG-1/BLOG-3). Antes de cada
+  commit: `auditoria-de-impacto` sobre o diff. Para D-2, pedir foco explícito
+  em "6 asserções reescritas sem perder cobertura de AC" (regredir um AC é
+  ruído silencioso que o gate não pega — o teste passa pelo motivo errado).
+- **Padrão Ruby** (não muda): `# frozen_string_literal: true`, `snake_case`,
+  minitest declarativo sem DSL, `Nokogiri` já disponível (confirmar em
+  `Gemfile.lock`; se não, decidir no Red da Fase 1 entre `Nokogiri` e
+  `Regexp` — a convenção atual de `site_test.rb` é `File.read` + `include?`
+  simples, idiomaticamente preservar).
+- **Convenção `# @spec`** (do BLOG-3): preservar tags existentes sobre os
+  métodos reescritos. Se um teste reescrito passar a cobrir ACs adicionais,
+  **somar** à tag (`# @spec FR-9 AC-9.1 FR-10 AC-10.1`), não substituir.
+- **Diretrizes de escopo** (não fazer): não mudar `_config.yml`; não tocar
+  `_posts/` (exceto o typo-fix controlado da Fase 3 para prova de AC-8.1,
+  revertível por `git revert`); não mexer no workflow do GitHub; não
+  renomear métodos `test_*` (mudança de interface do minitest).
+- **Nomes dos métodos de `site_test.rb`**: `test_indice_de_busca_lista_os_tres_posts_ficticios`
+  cita "três posts fictícios" no nome — contradiz a invariante estrutural
+  pós-D-2. Renomear está fora do escopo (Strategy); registrar como follow-up
+  (ver Deferred).
+
+### Phases
+
+Ordenadas por risco crescente: a reescrita de testes é o maior risco
+técnico (regredir cobertura silenciosamente). Rename de fixtures e
+bookkeeping do task.md são baixo risco. Verification externa depende de
+ação do autor fora do SSD (push), por isso vem após o trabalho local.
+
+**Phase 1 — Reescrever `test/site_test.rb` para invariantes estruturais (D-2)** · covers: AC-4.1, AC-5.1, AC-9.1, AC-10.2, AC-16.1, AC-19.1, AC-19.2, D-2, D-8
+
+- **Red:** baseline capturada (confirma 6 falhas pelos nomes atuais). Para
+  cada um dos 6 testes, substituir a asserção por slug por invariante
+  estrutural e rodar: a nova asserção deve falhar primeiro **pelo motivo
+  certo** se o conteúdo não existir — ex.: `test_tempo_de_leitura_visivel_no_post`
+  reescrito para "primeiro post iterado em `_site/posts/*/index.html`
+  contém `min read`" falha se nenhum post existir. Confirmar o motivo da
+  falha nova (não a mesma mensagem "no such file" do baseline).
+- **Green:** aplicar as 6 reescritas. Invariantes:
+  (a) `test_home_lista_posts_em_ordem_cronologica_decrescente`: extrair
+  `<time datetime="…">` da home via regex ou Nokogiri, asserar ≥ 1 e
+  ordem decrescente;
+  (b) `test_tags_tem_pagina_por_tag_usada`: iterar front matter dos posts
+  publicados em `_site/posts/*/index.html` (ou derivar das URLs em
+  `search.json`), coletar tags, asserar `_site/tags/<slug(tag)>/index.html`
+  para cada;
+  (c) `test_indice_de_busca_lista_os_tres_posts_ficticios`: renomear
+  internamente (comentário) ou aceitar nome legado; asserar
+  `JSON.parse(File.read("_site/assets/js/data/search.json")).size ==
+  Dir["_site/posts/*/index.html"].size`;
+  (d) `test_tempo_de_leitura_visivel_no_post`, `test_post_tecnico_tem_highlight_e_mermaid`,
+  `test_imagem_do_post_e_servida_e_referenciada`: encontrar o primeiro
+  post que declare a capacidade (`read_time`/bloco de código/`mermaid: true`
+  + fenced block/`image.path`) e asserar sobre ele.
+- **Refactor:** extrair helper `published_posts` em `SiteTest`
+  (`Dir["_site/posts/*/index.html"]`) se usado em ≥ 3 métodos; `ruby -wc`
+  limpo.
+- **Done when:** `tools/check.sh` → `site_test.rb` `22/≥37/0/0` (todas verdes;
+  assertion count pode subir); `grep -c "# @spec" test/site_test.rb` continua
+  22 (invariante do BLOG-3); `grep -nE "RASCUNHO|analise-exploratoria|api-tarefas-ruby|visualizando-pipelines" test/site_test.rb` sem saída (slugs mortos exorcizados);
+  `auditoria-de-impacto` fecha sem achado de "regressão de AC".
+
+**Phase 2 — Renomear fixtures sem `[RASCUNHO]` (D-3)** · covers: D-3, armadilha `check_draft_guard` pré-flip
+
+- **Red:** `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → 2
+  (estado atual). Simular flip local provisório: `sed -i 's/^noindex: true/noindex: false/' _config.yml`
+  (num shell throwaway, sem commitar) + `docker compose run --rm site bundle
+  exec ruby tools/validate-front-matter.rb` deve **reprovar** com
+  `check_draft_guard` sobre as fixtures symlinkadas pelo `check.sh`.
+  Reverter o `_config.yml` imediatamente (`git checkout _config.yml`).
+  Prova que D-3 é precondição real do flip.
+- **Green:** editar `test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md:2`
+  removendo `[RASCUNHO] ` do `title`; idem para `2026-01-02-fixture-post-comum.md:2`.
+  Nenhuma outra edição.
+- **Refactor:** nada.
+- **Done when:** `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → 0;
+  `tools/check.sh` segue `22/≥37/0/0` (idem Fase 1); simulação pós-rename
+  (mesma `sed` throwaway) agora passa no validador (prova a precondição do
+  flip).
+- **Not test-first?** o "teste" aqui é a simulação local do flip — não há
+  teste minitest dedicado porque validar `[RASCUNHO]` + `noindex: false`
+  já é coberto pelos testes de `check_draft_guard` em
+  `test/validate_front_matter_test.rb` (não precisam de novo teste).
+
+**Phase 3 — Verification externa pré-flip (D-5)** · covers: AC-6.1, AC-6.2, AC-8.1, AC-17.1, AC-17.2, AC-18.1, D-5
+
+- **Precondição:** autor executou `git push origin main` (ou merge de
+  `blog-1-mvp` → `main`) e workflow finalizou verde. Fora do SSD; o plan
+  registra isso como pré-requisito, não como passo deste plan.
+- **Red:** `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/`
+  antes do push → 404 (confirmado em AU-19 do spec rev 2); se já ≠ 404,
+  o push aconteceu entre a aprovação deste plan e o start desta Fase.
+- **Green:** executar os 5 cheques da Strategy (D-5), em ordem:
+  1. `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/robots.txt` → 200
+  2. `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/sitemap.xml` → 200
+  3. `curl -s https://ebenezer-dorneles.github.io/ | grep -c '<meta name="robots" content="noindex, nofollow">'` → 1
+  4. **Prova fetch-depth: 0 / AC-8.1**: typo-fix de 1 linha em
+     `_posts/2026-09-29-etl-dados-prf.md`, commit (`fix(content): typo em
+     etl-prf post`), push, aguardar run, `curl -s https://ebenezer-dorneles.github.io/posts/<slug>/
+     | grep -c 'Last updated'` → ≥ 1
+  5. **Prova paths-ignore / AC-6.2**: edit só em `README.md` (uma linha),
+     commit (`docs(readme): minor copy edit`), push, `gh run list -L 2
+     --json path,headSha,createdAt --jq '.[0].headSha'` → igual ao SHA do
+     commit **anterior** (do passo 4), não ao do commit do README. Alternativa
+     sem `gh`: olhar aba Actions do repo e confirmar que o commit do README
+     não aparece.
+- **Refactor:** registrar comando + resultado literal (incluindo exit code
+  e primeiros 200 caracteres do output quando aplicável) em `task.md ##
+  Verification → Phase 3 — Verification externa (D-5)`, uma subseção por
+  cheque. É esse registro que fecha D-5.
+- **Done when:** 5 cheques registrados com resultados conforme esperado;
+  nenhum re-run de workflow pendente; `gh run list -L 3` mostra 2 runs
+  bem-sucedidos (push inicial + typo-fix); AC-18.3 (parte "repo HTTP 200")
+  verificada manualmente para o único post `project: true` (`curl -s -o
+  /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/etl-prf-data`
+  → 200, habilitado por D-6).
+- **Not test-first?** Verification externa é **inspeção de deploy real**,
+  não TDD; o "Red" é o estado pré-push (site 404). Substituto da falha-por-asserção
+  é a conferência linha-a-linha do resultado esperado × resultado observado,
+  registrada no task.md.
+
+**Phase 4 — Supersede subitens do Step 6 do BLOG-1 (D-10)** · covers: D-10
+
+- **Red:** `grep -c "~~" docs/specs/blog-portfolio/task.md` → 0 nos subitens
+  do Step 6 (nenhum superseded registrado ainda).
+- **Green:** quando ssd-task decompuser este plan, aplicar: cada subitem
+  aberto do Step 6 do BLOG-1 em `task.md ## Checklist` (bloco citação
+  task.md:16-23 e o próprio Step 6 na Execution Log de 2026-09-18) ganha
+  wrapping `- [ ] ~~<item>~~ (superseded by BLOG-2 Fase técnica D-5)`;
+  `## Deviations` do task.md ganha linha datada citando D-10 como fonte.
+  Nenhum item é apagado.
+- **Refactor:** nada.
+- **Done when:** `grep -c "superseded by BLOG-2" docs/specs/blog-portfolio/task.md`
+  ≥ 1; ssd-status para BLOG-1 Step 6 não acusa mais "unchecked checklist
+  items pendentes do Step 6" como blocker.
+- **Not test-first?** reorganização documental; a asserção é o grep acima.
+
+### Coverage
+
+| Item | Phase | Test / check |
+|---|---|---|
+| AC-4.1 (tempo de leitura visível) | 1 | `site_test.rb test_tempo_de_leitura_visivel_no_post` reescrito (invariante: primeiro post com `read_time` renderiza `min read`) |
+| AC-5.1 (asset local existe) | 1 | `test_imagem_do_post_e_servida_e_referenciada` reescrito (invariante: para primeiro post com `image.path`, asset existe em `assets/img/posts/<slug>/`) |
+| AC-9.1 (home ordem cronológica) | 1 | `test_home_lista_posts_em_ordem_cronologica_decrescente` reescrito (invariante: `<time datetime>` extraído da home em ordem decrescente, D-8) |
+| AC-10.2 (página por tag) | 1 | `test_tags_tem_pagina_por_tag_usada` reescrito (invariante: para cada tag usada por post publicado, existe `_site/tags/<slug>/index.html`) |
+| AC-16.1 (`search.json` existe) | 1 | `test_indice_de_busca_lista_os_tres_posts_ficticios` reescrito (invariante: `search.json.size == publicados.size`) — nome legado mantido no método; renomear fica em Deferred |
+| AC-19.1 (Rouge highlight) | 1 | `test_post_tecnico_tem_highlight_e_mermaid` reescrito (invariante: primeiro post com fenced code block tem `<div class="highlight">`) |
+| AC-19.2 (Mermaid em `post`) | 1 | mesmo teste (invariante: primeiro post com `mermaid: true` renderiza `language-mermaid`) |
+| AC-6.1 (workflow dispara em push de arquivo do site) | 3 | D-5 passo 4 (edit em `_posts/`, push, run aparece em `gh run list`) |
+| AC-6.2 (`paths-ignore` não dispara em README-only) | 3 | D-5 passo 5 (edit em `README.md`, push, nenhum run novo) |
+| AC-8.1 (`last_modified_at` em ≥ 2 commits) | 3 | D-5 passo 4 (post com 2 commits mostra "Last updated" no HTML publicado) |
+| AC-17.1 (sitemap.xml 200) | 3 | D-5 passo 2 (`curl` externo) |
+| AC-17.2 (robots.txt 200) | 3 | D-5 passo 1 (`curl` externo) |
+| AC-18.1 (meta robots `noindex, nofollow`) | 3 | D-5 passo 3 (`curl` externo + grep) |
+| AC-18.3 (parte "repo HTTP 200") | 3 | D-5 Done when (curl no `repo` do post ETL/PRF, agora 200 pós-D-6) |
+| D-2 (reescrita de `site_test.rb`) | 1 | Fase 1 inteira |
+| D-3 (fixtures sem `[RASCUNHO]`) | 2 | Fase 2 inteira |
+| D-5 (Verification externa pré-flip) | 3 | Fase 3 inteira |
+| D-6 (`etl-prf-data` público) | — | já concluído pelo autor em 2026-09-29 (Context + task.md Execution Log 2026-09-29) |
+| D-7 (Pages Source = GitHub Actions) | — | já concluído pelo autor em 2026-09-29 (Context + task.md Execution Log 2026-09-29) |
+| D-8 (invariante home via fixtures) | 1 | aplicado na reescrita de AC-9.1 (fixtures + post real = ≥ 2 datas ordenáveis no gate local) |
+| D-10 (supersede Step 6) | 4 | Fase 4 inteira |
+| AC-7.1 (histórico via git) | — | propriedade do modelo (explícito no spec); verify por inspeção `git log` sobre o typo-fix do passo 4 da Fase 3 |
+| AC-8.2 (`last_modified_at` em 1 commit) | — | implícito no AC-8.1: o post ETL/PRF antes do typo-fix é o caso de 1 commit (Last updated ausente). Registrar observação em task.md Verification da Fase 3 (não requer passo dedicado) |
+| AC-8.3 (checkout raso quebra) | — | armadilha documentada no spec; sem teste automatizado (explícito) |
+| AC-11.1 (CATEGORIES constante única) | — | coberto pelo BLOG-3 (plan.md:407); inalterado por BLOG-2 Fase técnica |
+| AC-14.1 (público sem auth) | — | implícito nos 5 cheques `curl` da Fase 3 (todos sem credenciais, resposta 200). Registrar observação em task.md Verification |
+| AC-15.1 (giscus) | — | Fase 2 (FR-15); fora do BLOG-2 |
+| AC-18.2 (meta ausente pós-flip) | — | Fase de conteúdo (gated no D-11); fora do BLOG-2 Fase técnica |
+| AC-18.3 (contador "≥ 10 posts reais") | — | Fase de conteúdo (operacional, pré-flip); fora do BLOG-2 Fase técnica |
+| AC-19.3 (Mermaid em `project-post`) | — | garantido por D-4 sem teste dedicado (plan.md:423); nenhum post `project-post` + Mermaid existe hoje além do ETL/PRF, que já é `project: true` + `mermaid: true` — AC-19.3 fica implicitamente coberto pelo mesmo teste reescrito da Fase 1 (confirmar no Refactor) |
+| AC-20.1 (preview local ≡ CI) | — | manual/visual (AU-32); fora do escopo técnico desta fase |
+| D-4 (sombreamento `js-selector.html`) | — | fato consumado em `4083351`; inalterado |
+| D-9 (diff manual em bumps) | — | disciplina processual (R-3); não acionada neste plan (sem bump do Chirpy) |
+| D-11 (gate de 10 posts) | — | Fase de conteúdo; fora do BLOG-2 Fase técnica |
+| D-12 (modernização UC/FR/AC) | — | entregue por BLOG-3 (`76cb996` + `e87db58`) |
+| D-13 (procedimento despublicação) | — | ativa só pós-flip; fora do BLOG-2 Fase técnica |
+
+**Nenhum AC/decisão do escopo sem destino.** AC-18.2, AC-18.3, AC-15.1 e
+D-11/D-13 ficam explicitamente diferidos à Fase de conteúdo (gated no marco
+de 10 posts reais) ou à Fase 2 do projeto — registrado em Deferred.
+
+### Rollout & rollback
+
+N/A — spec rev 4 não requer `## Migration & rollout` para esta fase (não há
+migração de dado; nenhum breaking change de API; mudanças locais em
+`test/site_test.rb` + fixtures + bookkeeping de task.md). Rollback por fase:
+
+- **Fase 1 (D-2):** `git revert <sha da reescrita>` restaura as 6 asserções
+  antigas (gate volta a `22/37/6/0`); nenhum efeito externo.
+- **Fase 2 (D-3):** `git revert <sha do rename>` restaura `[RASCUNHO]` nos
+  títulos; `check_draft_guard` volta a reprovar pré-flip (estado atual).
+- **Fase 3 (D-5):** Verification é observacional (curl + inspeção); o único
+  commit alcançável é o typo-fix do passo 4 e o edit do README do passo 5
+  — ambos reversíveis por `git revert`. Reversão do typo-fix mantém AC-8.1
+  provado (o fato ocorreu; o commit de prova pode ser desfeito depois).
+- **Fase 4 (D-10):** edit de documentação (`task.md`); `git revert` restaura
+  checklist original.
+
+Sem feature flag. Sem coordenação com deploy (D-5 **observa** o deploy;
+não o modifica).
+
+### Deferred
+
+- **Fase de conteúdo (gated no D-11):** flip do `noindex` (`_config.yml`
+  `noindex: true` → `false`) + Verification pós-flip (home sem meta robots;
+  sitemap continua; htmlproofer verde; `curl` nos `repo`s de todos
+  `project: true` → 200). Pré-condição: ≥ 10 posts reais no `_posts/`.
+  Cronologia: semanas a meses, conforme spec (`### BLOG-2 → Fase de conteúdo`).
+  Plan separado quando o marco for atingido.
+- **Dívida de infra do workflow:** trocar passos inline `Build site`/`Test
+  site` do `.github/workflows/pages-deploy.yml` por `bash tools/check.sh`
+  (hoje o validador só roda no gate local, não no CI). Fora do escopo do
+  BLOG-2 por decisão explícita da spec (`### BLOG-2 → Fora do escopo`).
+  Vira issue própria quando o workflow for tocado.
+- **Rename do método `test_indice_de_busca_lista_os_tres_posts_ficticios`:**
+  pós-D-2 o nome contradiz a invariante (não cita mais "três posts
+  fictícios"). Rename está fora do escopo da Fase 1 (Review & code
+  standards). Follow-up para quando outro trabalho tocar `site_test.rb`.
+- **Dívida de i18n do `project-post`** (D-4, BLOG-1 Step 4): strings pt-BR
+  fixas no layout; vira issue própria em fase 2 com `hreflang` + prefixo
+  de idioma.
+- **Reconciliação de `_includes/js-selector.html` / `metadata-hook.html` em
+  bumps do Chirpy** (D-9/R-3): disciplina processual, não trabalho ativo
+  deste plan. Primeiro bump pós-BLOG-2 ativa.
+
+### Spec gaps
+
+Nenhum. Spec rev 4 aprovada em `## Approvals` (autor, 2026-09-29); D-2, D-3,
+D-5, D-10 todos têm Decisions estabelecidas desde rev 2; D-6/D-7 (fatos
+consumados pelo autor em 2026-09-29) alinhados com D-11 (Fase técnica
+executável agora). Nenhum AU-n open em qualquer `## Audit — rev N`.
+
+**Nota de tamanho do arquivo:** este `plan.md` já cruzou a marca de ~250
+linhas desde a abertura de BLOG-3 (plan.md:465-469 registra). Com esta nova
+seção, `plan.md` fica em ~730 linhas. O contrato do ssd-plan prevê que a
+compactação (mover detalhe de plan finalizado para `task.md` Execution Log e
+deixar pointer aqui) seja responsabilidade do ssd-task no próximo pass.
+Registrado novamente para ssd-task tratar ao decompor BLOG-2 Fase técnica.
