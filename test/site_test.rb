@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require "minitest/autorun"
 
 # Testes de integração sobre o `_site/` já gerado por `tools/test.sh`
@@ -20,6 +21,10 @@ class SiteTest < Minitest::Test
 
   def exists?(relative_path)
     File.exist?(File.join(SITE_DIR, relative_path))
+  end
+
+  def published_posts
+    Dir[File.join(SITE_DIR, "posts", "*", "index.html")].sort
   end
 
   # @spec (decisão pt-BR)
@@ -104,15 +109,13 @@ class SiteTest < Minitest::Test
 
   # @spec FR-9 AC-9.1
   def test_home_lista_posts_em_ordem_cronologica_decrescente
-    home = read("index.html")
-    posicoes = [
-      "/posts/visualizando-pipelines/",
-      "/posts/api-tarefas-ruby/",
-      "/posts/analise-exploratoria-vendas/"
-    ].map { |url| home.index(%(href="#{url}")) }
-
-    posicoes.each { |posicao| refute_nil posicao, "post ausente da home" }
-    assert_equal posicoes, posicoes.sort, "posts fora de ordem cronológica decrescente"
+    # Chirpy renderiza <time data-ts="<unix>" data-df="DD/MM/YYYY"> em cada
+    # card da home; o rodapé usa <time>2026</time> sem data-ts (ignorado).
+    timestamps = read("index.html").scan(/<time\s+data-ts="(\d+)"/).flatten.map(&:to_i)
+    assert_operator timestamps.size, :>=, 1,
+                    "home deveria listar >= 1 post via <time data-ts=...>"
+    assert_equal timestamps.sort.reverse, timestamps,
+                 "timestamps dos posts na home fora de ordem decrescente: #{timestamps.inspect}"
   end
 
   # @spec FR-10 AC-10.1
@@ -133,42 +136,83 @@ class SiteTest < Minitest::Test
 
   # @spec FR-10 AC-10.2
   def test_tags_tem_pagina_por_tag_usada
-    %w[python dados ruby jekyll visualizacao].each do |tag|
-      assert exists?("tags/#{tag}/index.html"), "_site/tags/#{tag}/ não foi gerado"
+    # Tags "em uso" derivadas de search.json (que o próprio tema gera a partir
+    # dos posts publicados). Invariante: para cada tag usada por algum post,
+    # existe a página /tags/<tag>/.
+    indice = JSON.parse(read("assets/js/data/search.json"))
+    tags_em_uso = indice.flat_map do |post|
+      post.fetch("tags", "").split(",").map(&:strip).reject(&:empty?)
+    end.uniq
+    assert_operator tags_em_uso.size, :>=, 1, "nenhuma tag em uso em posts publicados"
+    tags_em_uso.each do |tag|
+      assert exists?("tags/#{tag}/index.html"),
+             "_site/tags/#{tag}/ ausente para tag '#{tag}' em uso em search.json"
     end
   end
 
   # @spec FR-4 AC-4.1
   def test_tempo_de_leitura_visivel_no_post
-    assert exists?("posts/api-tarefas-ruby/index.html"), "post não foi gerado"
-    assert_match(%r{<em>\d+ min</em>}, read("posts/api-tarefas-ruby/index.html"))
+    posts = published_posts
+    assert_operator posts.size, :>=, 1, "nenhum post publicado em _site/posts/"
+    encontrado = posts.find { |path| File.read(path) =~ %r{<em>\d+\s*min</em>} }
+    refute_nil encontrado,
+               "nenhum post publicado renderizou indicação 'X min' de tempo de leitura " \
+               "(#{posts.map { |p| File.basename(File.dirname(p)) }.inspect})"
   end
 
-  # @spec FR-19 AC-19.1 AC-19.2
+  # @spec FR-19 AC-19.1 AC-19.2 AC-19.3
   def test_post_tecnico_tem_highlight_e_mermaid
-    assert exists?("posts/visualizando-pipelines/index.html"), "post não foi gerado"
-    post = read("posts/visualizando-pipelines/index.html")
-    assert_match(/class="highlight"/, post)
-    assert_match(/language-mermaid/, post)
+    # AC-19.1 e AC-19.2 são capacidades independentes: o primeiro post com
+    # Rouge pode não ser o primeiro com Mermaid. Dois `find`s separados.
+    # Marcador de Mermaid "ativo" é o carregamento de `mermaid.min.js`
+    # (gated por `mermaid: true` no front matter via _includes/js-selector.html,
+    # D-4) — `language-mermaid` sozinho pode vir do Rouge sem o JS. O post
+    # que carrega Mermaid também é `layout: project-post` (marcador
+    # `project-repo` do _layouts/project-post.html), provando AC-19.3.
+    posts = published_posts
+    assert_operator posts.size, :>=, 1, "nenhum post publicado em _site/posts/"
+    htmls = posts.map { |p| File.read(p) }
+
+    html_rouge = htmls.find { |html| html.include?('class="highlight"') }
+    refute_nil html_rouge, "nenhum post publicado contém bloco Rouge (`class=\"highlight\"`)"
+
+    html_mermaid = htmls.find { |html| html.include?("mermaid.min.js") }
+    refute_nil html_mermaid,
+               "nenhum post publicado carrega `mermaid.min.js` (front matter sem `mermaid: true` ou js-selector regrediu)"
+    assert_includes html_mermaid, "language-mermaid",
+                    "post com `mermaid.min.js` carregado não contém bloco `language-mermaid`"
+    assert_includes html_mermaid, 'class="project-repo',
+                    "post com Mermaid não é `layout: project-post` (AC-19.3 — D-4 sombreamento js-selector regrediu)"
   end
 
   # @spec FR-5 AC-5.1
   def test_imagem_do_post_e_servida_e_referenciada
-    assert exists?("posts/visualizando-pipelines/index.html"), "post não foi gerado"
-    post = read("posts/visualizando-pipelines/index.html")
-    assert_match(%r{src="/assets/img/posts/visualizando-pipelines/diagrama\.png"}, post)
-    assert exists?("assets/img/posts/visualizando-pipelines/diagrama.png"),
-           "imagem não foi copiada para _site/"
+    # Invariante universalmente quantificada: para cada post publicado que
+    # referencia um asset em /assets/img/posts/<slug>/, o arquivo correspondente
+    # existe em _site/. Vacuamente verdadeira enquanto nenhum post declarar
+    # `image.path`; o htmlproofer (parte do gate) é o detector direto de
+    # referência quebrada (AC-5.2).
+    pendentes = published_posts.flat_map do |path|
+      File.read(path)
+          .scan(%r{src="(/assets/img/posts/[^"]+)"})
+          .flatten
+          .uniq
+          .reject { |rel| exists?(rel.delete_prefix("/")) }
+          .map { |rel| "#{File.basename(File.dirname(path))} -> #{rel}" }
+    end
+    assert_empty pendentes,
+                 "posts com referência a asset ausente em _site/: #{pendentes.inspect}"
   end
 
   # @spec FR-16 AC-16.1
   def test_indice_de_busca_lista_os_tres_posts_ficticios
+    # Nome legado preservado (rename é follow-up — plan Deferred). Invariante
+    # estrutural: search.json contém uma entrada por post publicado.
     assert exists?("assets/js/data/search.json"), "índice de busca não foi gerado"
-    indice = read("assets/js/data/search.json")
-    [
-      "/posts/analise-exploratoria-vendas/",
-      "/posts/api-tarefas-ruby/",
-      "/posts/visualizando-pipelines/"
-    ].each { |url| assert_includes indice, url }
+    indice = JSON.parse(read("assets/js/data/search.json"))
+    publicados = published_posts
+    assert_operator publicados.size, :>=, 1, "nenhum post publicado em _site/posts/"
+    assert_equal publicados.size, indice.size,
+                 "search.json tem #{indice.size} entradas; _site/posts/ tem #{publicados.size} posts"
   end
 end

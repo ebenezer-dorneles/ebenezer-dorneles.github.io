@@ -22,69 +22,44 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
 > desmarcados até Phase 4 (D-10) aplicar o supersede formal.
 
 - [x] **BLOG-2 Fase técnica Baseline** — HEAD `750a3d4`, `tools/check.sh` → validador `26/29/0/0`, htmlproofer `16 arquivos/0 falhas`, `site_test.rb` `22/37/6/0` (6 falhas pré-existentes de `686c5c0` confirmadas pelos mesmos nomes de teste). Ver Verification.
-- [ ] **Phase 1 — Reescrever `test/site_test.rb` para invariantes estruturais (D-2)**
-  - [ ] Red: para cada um dos 6 testes falhando no baseline, substituir asserção por slug fictício por invariante estrutural e confirmar que a nova asserção falha pelo motivo certo (não pela mesma mensagem "post não foi gerado" / "não foi gerado" / `nil to not be nil` do baseline)
-  - [ ] Green: aplicar as 6 reescritas conforme Strategy (a–d) e Coverage da Phase 1 — home via `<time datetime>` + ordem decrescente; tags via iteração sobre posts publicados; `search.json.size == publicados.size`; capacidades (Rouge/Mermaid/image) descobertas dinamicamente no primeiro post que as declara
-  - [ ] Refactor: extrair helper `published_posts` em `SiteTest` se ≥ 3 métodos usarem; preservar tags `# @spec` existentes (BLOG-3) sobre os métodos reescritos — se cobertura crescer, somar à tag em vez de substituir
-  - [ ] Done when: `tools/check.sh` → `site_test.rb` `22/≥37/0/0` (todas verdes); `grep -c "# @spec" test/site_test.rb` continua 22; `grep -nE "RASCUNHO|analise-exploratoria|api-tarefas-ruby|visualizando-pipelines" test/site_test.rb` sem saída; `ruby -wc` limpo
-  - [ ] Auditoria de impacto formal via skill (foco: "6 asserções reescritas sem perder cobertura de AC")
-- [ ] **Phase 2 — Renomear fixtures sem `[RASCUNHO]` (D-3)** · pendente até Phase 1 fechar
+- [x] **Phase 1 — Reescrever `test/site_test.rb` para invariantes estruturais (D-2)**
+  - [x] Red: baseline documenta as 6 falhas por slug morto; experimento controlado (remoção temporária de `_posts/2026-09-29-etl-dados-prf.md` + rebuild) confirmou que `test_post_tecnico_tem_highlight_e_mermaid` falha com a nova mensagem invariante (`"nenhum post publicado contém bloco Mermaid"`), não a legada por slug — restore íntegro verificado por `diff` contra backup
+  - [x] Green: 6 reescritas aplicadas + `require "json"` + helper `published_posts` extraído (5 usos; plan exigia ≥ 3)
+  - [x] Refactor: dois `find`s separados em `test_post_tecnico_tem_highlight_e_mermaid` (Rouge e Mermaid independentes); marcador de Mermaid trocado de `language-mermaid` (que o Rouge gera sem `mermaid.min.js` ativo) para `mermaid.min.js` + asserção adicional de `project-repo` para provar AC-19.3 explicitamente — correção pós-auditoria de impacto
+  - [x] Done when: `tools/check.sh` → validador `26/29/0/0`, htmlproofer `16 arquivos / 22 links / 0 falhas`, `site_test.rb` **`22/54/0/0`** (invariante do plan `22/≥37/0/0` satisfeita com folga); `grep -c "# @spec" test/site_test.rb` = 22; `grep -c "def test_" test/site_test.rb` = 22; `grep -nE "RASCUNHO|analise-exploratoria|api-tarefas-ruby|visualizando-pipelines" test/site_test.rb` vazio; `ruby -wc` `Syntax OK`
+  - [x] Auditoria de impacto formal via skill — veredito inicial "CORRIGIR ANTES" (1 buraco real em AC-19); correção aplicada e re-rodado; buraco #2 (tag com espaço) registrado como follow-up fora do escopo
+- [ ] **Phase 2 — Renomear fixtures sem `[RASCUNHO]` (D-3)**
+  - [ ] Red: `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → esperado 2 no estado atual; simulação local em shell throwaway: `sed -i 's/^noindex: true/noindex: false/' _config.yml` + `docker compose run --rm site bundle exec ruby tools/validate-front-matter.rb` deve reprovar via `check_draft_guard`; reverter imediatamente `_config.yml` via `git checkout`
+  - [ ] Green: editar `test/fixtures/site_posts/2026-01-01-fixture-post-projeto.md:2` removendo `[RASCUNHO] ` do `title`; idem `2026-01-02-fixture-post-comum.md:2`; nenhuma outra edição
+  - [ ] Refactor: nada
+  - [ ] Done when: `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → 0; `tools/check.sh` segue `22/≥37/0/0`; simulação pós-rename (mesma sed throwaway) agora passa no validador — prova precondição real do flip
+  - [ ] Auditoria de impacto (foco: "rename de 2 strings nos títulos das fixtures; prova de que check_draft_guard só atua pré-flip")
 - [ ] **Phase 3 — Verification externa pré-flip (D-5)** · pendente até Phase 2 fechar + autor executar `git push origin main`
 - [ ] **Phase 4 — Supersede subitens do Step 6 do BLOG-1 em `task.md` (D-10)** · pendente até Phase 3 fechar
 
 ## State Handover
 
-- **Done nesta sessão (2026-10-02):**
-  - `ssd-plan` escreveu `## Plan — BLOG-2 Fase técnica` em `plan.md`
-    (4 fases cobrindo D-2/D-3/D-5/D-10, Coverage com 13 ACs testados
-    + 7 diferidos explicitamente). Commit `750a3d4`
-    (`docs(plan): abre BLOG-2 Fase técnica (D-2, D-3, D-5, D-10)`).
-    spec.md `phase: validating → planning`.
-  - `ssd-task` decompôs **só a Phase 1** (tier M). Baseline em HEAD
-    `750a3d4` capturada: validador `26/29/0/0`, htmlproofer `16 arquivos
-    / 0 falhas`, `site_test.rb` `22/37/6/0`. As 6 falhas são as mesmas
-    do baseline BLOG-3 (herdadas de `686c5c0`), pelos mesmos nomes de
-    teste. Ver Verification → BLOG-2 Fase técnica Baseline.
-  - spec.md `phase: planning → implementing`.
-- **Next (Phase 1 — D-2):**
-  - Red para cada um dos 6 testes: substituir asserção por slug e rodar
-    `docker compose run --rm site bundle exec ruby -Itest test/site_test.rb`
-    para confirmar a nova mensagem de falha (não a legada).
-  - Green: aplicar reescritas (a) home via `<time datetime>` ordenada;
-    (b) tags via iteração sobre `_site/posts/*/index.html`; (c)
-    `search.json.size == publicados.size`; (d) capacidades (Rouge,
-    Mermaid, image) via primeiro post que declara cada uma.
-  - Refactor: avaliar extração de helper `published_posts`; preservar
-    tags `# @spec` existentes.
-  - Done when gate: `tools/check.sh` → `site_test.rb` `22/≥37/0/0`;
-    `grep -nE "RASCUNHO|analise-exploratoria|api-tarefas-ruby|visualizando-pipelines" test/site_test.rb` sem saída.
-  - Pré-commit: `auditoria-de-impacto` com foco em "regressão de AC".
+- **Done nesta sessão (2026-10-02 — Phase 1 fechada):**
+  - **Red** confirmado por baseline (6 falhas por slug morto já documentadas em `## Verification → BLOG-2 Fase técnica Baseline`) + experimento controlado: cópia de `_posts/2026-09-29-etl-dados-prf.md` para scratchpad + `git mv` para fora de `_posts/` + rebuild `check.sh` → `test_post_tecnico_tem_highlight_e_mermaid` falhou com mensagem **nova** (`"nenhum post publicado contém bloco Mermaid (\`language-mermaid\`)"`), não a legada por slug. Restore por `git mv` reverso + `diff` com backup = idêntico.
+  - **Green** aplicado em `test/site_test.rb`: 6 asserções reescritas + `require "json"` + helper `published_posts` extraído (5 ocorrências; plan exigia ≥ 3). Diff: +64/-29 linhas, 1 arquivo.
+  - **Auditoria de impacto** formal rodada; veredito inicial "CORRIGIR ANTES" por 1 buraco real em AC-19 (teste exigia Rouge+Mermaid no mesmo post, perdendo cobertura de AC-19.1 em cenário sem Mermaid; `language-mermaid` sozinho não prova `mermaid: true` ativo porque o Rouge gera essa classe mesmo sem o JS). **Correção aplicada**: dois `find`s separados (Rouge via `class="highlight"`; Mermaid via `mermaid.min.js` — prova que front matter tem `mermaid: true` **e** `_includes/js-selector.html` sombreado funciona); asserção adicional de `class="project-repo` para provar AC-19.3 explicitamente.
+  - **Gate final** (`docker compose run --rm site bash tools/check.sh`): validador `26/29/0/0`; htmlproofer `16 arquivos / 22 links / 0 falhas`; `site_test.rb` **`22/54/0/0`**. Invariante do plan `22/≥37/0/0` satisfeita com folga; `ruby -wc` `Syntax OK`.
+  - **Phase 2 decomposta** (tier M — próxima fase aberta).
+- **Next (Phase 2 — D-3):**
+  - Red: `grep -c "\[RASCUNHO\]" test/fixtures/site_posts/*.md` → espera 2; simulação local throwaway: `sed -i 's/^noindex: true/noindex: false/' _config.yml` + `docker compose run --rm site bundle exec ruby tools/validate-front-matter.rb` deve reprovar via `check_draft_guard` sobre as fixtures symlinkadas pelo `check.sh`; reverter `_config.yml` por `git checkout` imediatamente.
+  - Green: editar título das duas fixtures em `test/fixtures/site_posts/` removendo prefixo `[RASCUNHO] ` (preservar o resto do YAML).
+  - Done when: grep → 0; `check.sh` segue `22/54/0/0` (sem mudança de contagem — fixtures só mudam título, não front matter que o teste leia); simulação pós-rename passa no validador.
+  - Pré-commit: `auditoria-de-impacto` com foco em "rename de 2 strings nos títulos das fixtures".
 - **Blockers / open decisions:**
-  1. **Fase 3 bloqueada** até autor executar `git push origin main` (ou
-     merge de `blog-1-mvp` em `main`). Esta sessão **não** empurra sem
-     confirmação explícita do autor — a Phase 1 e a Phase 2 podem ser
-     feitas inteiras localmente antes do push.
+  1. **Phase 3 continua bloqueada** até autor executar `git push origin main` (ou merge de `blog-1-mvp` em `main`). Phase 2 pode ser feita local inteira primeiro.
+  2. **Commit pós-Phase 1 pendente** — esta sessão terminou com working tree alterada (`test/site_test.rb`, `docs/specs/blog-portfolio/task.md`); aguarda decisão do autor sobre commit (padrão BLOG-1/BLOG-3: commit do agente). Sugestão de mensagem: `test(blog-portfolio): reescreve test/site_test.rb para invariantes estruturais (D-2)`.
 - **Watch out:**
-  - Todo comando Ruby/Jekyll roda **dentro** do container
-    (`docker compose run --rm site …`); Ruby 4.0.6 do host geraria lock
-    com `BUNDLED WITH` 4.x.
-  - `test/site_test.rb` faz `skip` se `_site/` não existir: rodar via
-    `tools/check.sh` (que builda antes), senão a suíte "passa" sem verificar.
-    Para iteração rápida da Phase 1, pode-se usar `bundle exec ruby -Itest
-    test/site_test.rb` depois de 1 `tools/check.sh` inicial, aproveitando
-    o `_site/` gerado.
-  - Nome do método `test_indice_de_busca_lista_os_tres_posts_ficticios`
-    contradiz a invariante estrutural pós-D-2 (não cita mais "três posts
-    fictícios"). **Rename está fora do escopo da Phase 1** (plan Review
-    & code standards). Fica em Deferred do plan.
-  - Fixtures `test/fixtures/site_posts/*.md` continuam com `[RASCUNHO]`
-    no título até Phase 2 (D-3). Hoje inofensivo (`noindex: true`);
-    `check_draft_guard` só reprova quando `noindex` ≠ true.
-  - Diff da Phase 1 é código real (não comentário como no BLOG-3) —
-    `auditoria-de-impacto` tem material concreto a avaliar.
-  - Push `blog-1-mvp` → `main` continua pendente da decisão do autor.
-    Dois commits locais à frente de `origin/blog-1-mvp`
-    (`94ba825`, `750a3d4`).
+  - Todo comando Ruby/Jekyll roda **dentro** do container (`docker compose run --rm site …`); Ruby 4.0.6 do host geraria lock com `BUNDLED WITH` 4.x.
+  - `test/site_test.rb` faz `skip` se `_site/` não existir: Phase 2 só edita fixtures (titles) → não exige rebuildar antes do targeted `site_test.rb`, mas o full `check.sh` builda implicitamente.
+  - **Follow-up registrado como Deviation local (não bloqueante)**: `test_tags_tem_pagina_por_tag_usada` quebraria se um post declarar `tags: ["machine learning"]` (espaço) — Jekyll gera `tags/machine-learning/`, teste busca `tags/machine learning/index.html` literal. FR-1 AC-1.7 proíbe maiúscula/acento mas não espaços. Fora do escopo da Phase 1; registrado para follow-up (opções: validador proibir espaços, ou aplicar slugify no teste).
+  - Nome do método `test_indice_de_busca_lista_os_tres_posts_ficticios` continua contradizendo a invariante estrutural pós-D-2. Rename segue em Deferred do plan (fora do escopo do BLOG-2 Fase técnica).
+  - Fixtures seguem com `[RASCUNHO]` no título até Phase 2 (hoje inofensivo — `noindex: true` ativa; `check_draft_guard` só reprova quando `noindex` ≠ true).
+  - Push `blog-1-mvp` → `main` continua pendente da decisão do autor. HEAD local: `94ba825` + commits do baseline (`750a3d4`) + edits uncommitted da Phase 1 (`test/site_test.rb` + `task.md`).
 
 ## Deviations
 
@@ -127,6 +102,57 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   realidade do gate.
   · class: plan-affecting
   · action: handed to plan
+- 2026-10-02 — Plan Phase 1 Green (a) sugere "home via `<time datetime=…>`
+  + ordem decrescente". A saída real do tema Chirpy 7.6.0 renderiza
+  `<time data-ts="<unix>" data-df="DD/MM/YYYY">` nos cards da home (unix
+  timestamp em `data-ts=`, não ISO em `datetime=`). Reescrita usa regex
+  `/<time\s+data-ts="(\d+)"/` em cima do atributo real. O rodapé usa
+  `<time>2026</time>` sem `data-ts`, naturalmente ignorado. Intent do plan
+  ("ordem cronológica decrescente verificada por N timestamps extraídos
+  do HTML") preservado; só muda a fonte do timestamp.
+  · class: local
+  · action: continued
+- 2026-10-02 — Plan Phase 1 Green (d) para AC-5.1 descreve "encontrar o
+  primeiro post que declare `image.path` e asserar sobre ele". Realidade do
+  baseline: **nenhum post publicável declara `image.path`** hoje (o único
+  asset em `_site/assets/img/posts/` é lixo `visualizando-pipelines/diagrama.png`
+  do post removido em `686c5c0`). "Primeiro post com a capacidade" seria
+  nulo e o teste falharia por motivo errado (ausência de dado em vez de
+  ausência de propriedade). Reinterpretei a invariante como universalmente
+  quantificada: "para cada post publicado que referencia um `src="/assets/img/posts/..."`,
+  o arquivo existe em `_site/`". Vacuamente verdadeira hoje; robusta para
+  quando post real com imagem for publicado. AC-5.2 (htmlproofer reprova
+  ref quebrada) continua provada pelo próprio gate (`htmlproofer` falha
+  no build se src quebrar). Preserva tag `# @spec FR-5 AC-5.1`.
+  · class: local
+  · action: continued
+- 2026-10-02 — Plan Phase 1 Green (d) para AC-19 descreve "primeiro post
+  que declare bloco de código / `mermaid: true` + fenced block". Auditoria
+  de impacto detectou dois problemas: (1) exigir Rouge e Mermaid **no mesmo
+  post** perde cobertura de AC-19.1 em cenário onde há Rouge sem Mermaid;
+  (2) o marcador `language-mermaid` sozinho é gerado pelo Rouge mesmo
+  quando `mermaid: true` **não** está no front matter — o teste passaria
+  pelo motivo errado se o `mermaid: true` for removido mas o bloco
+  ` ```mermaid` ficar. Correção aplicada: dois `find`s separados (Rouge
+  via `class="highlight"` em qualquer post; Mermaid via `mermaid.min.js`
+  carregado — gated por `_includes/js-selector.html` que exige o front
+  matter correto); asserção adicional de `class="project-repo` para
+  provar AC-19.3 explicitamente (sem isso, somar `AC-19.3` à tag seria
+  bluff). Preserva tag `# @spec FR-19 AC-19.1 AC-19.2 AC-19.3`.
+  · class: local
+  · action: continued
+- 2026-10-02 — Follow-up registrado (não aplicado): `test_tags_tem_pagina_por_tag_usada`
+  quebraria se um post declarar tag com espaço (ex.: `tags: ["machine learning"]`)
+  — Jekyll gera `tags/machine-learning/`, teste busca `tags/machine learning/index.html`
+  literal. FR-1 AC-1.7 proíbe maiúscula/acento mas não espaços; nenhum post
+  hoje declara tag com espaço. Opções futuras: (a) estender FR-1 AC-1.7 para
+  proibir espaços no validador; (b) aplicar `.gsub(/\s+/, "-")` no teste. Fora
+  do escopo da Phase 1 (plan Strategy diz "não adicionar teste novo", e esse
+  é um estado que o teste antigo também não cobria — listava slugs fixos
+  sem espaço). Registrado para quando outra issue tocar `site_test.rb` ou
+  o validador.
+  · class: local
+  · action: continued
 
 ## Execution Log
 
@@ -520,6 +546,54 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   `_data/` tocado. Handoff aberto para a próxima sessão iniciar o Red da
   Phase 1.
 
+### 2026-10-02 — BLOG-2 Fase técnica Phase 1: reescrita de `site_test.rb` (D-2)
+
+- **Inspeção prévia** (`_site/` do baseline + fixtures + post real):
+  - `_site/posts/` tem 3 entradas (`etl-dados-prf` + 2 fixtures symlinkadas);
+    `search.json` tem 3 entradas correspondentes.
+  - Home usa `<time data-ts="<unix>" data-df="DD/MM/YYYY">` em cada card;
+    rodapé `<time>2026</time>` sem `data-ts`. **Deviation local**: plan
+    sugeriu `datetime=` mas a saída real é `data-ts=`.
+  - Nenhum post publicável declara `image.path`. Único asset em
+    `_site/assets/img/posts/` é lixo `visualizando-pipelines/diagrama.png`
+    do post removido em `686c5c0`. **Deviation local**: invariante de
+    AC-5.1 reinterpretada como universalmente quantificada (vacuamente
+    verdadeira hoje; detecta regressão quando post real com imagem for
+    publicado).
+  - `etl-dados-prf` é `project: true` + `layout: project-post` + `mermaid: true`
+    com bloco Mermaid + bloco Python (Rouge). O HTML gerado tem
+    `<em>11 min</em>`, `<div class="highlight">`, `<pre><code class="language-mermaid">graph TD`,
+    `<script defer src="…/mermaid@11/dist/mermaid.min.js">`, `<div class="project-repo…">`.
+    Fixtures: `<em>1 min</em>` (Chirpy arredonda), sem Mermaid, sem Rouge, sem project-repo.
+- **Red (baseline + experimento controlado):**
+  - Baseline em HEAD `750a3d4` já documenta as 6 falhas por slug morto
+    (ver bloco "BLOG-2 Fase técnica Baseline" abaixo).
+  - Experimento: cópia de `_posts/2026-09-29-etl-dados-prf.md` para
+    scratchpad + `git mv _posts/2026-09-29-etl-dados-prf.md docs/specs/ETL-TMP-OUT.md`
+    + `docker compose run --rm site bash tools/check.sh` →
+    `test_post_tecnico_tem_highlight_e_mermaid` falha com mensagem
+    **nova** da invariante: `"nenhum post publicado contém bloco Mermaid (\`language-mermaid\`).\nExpected nil to not be nil."` — não é a legada
+    `"post não foi gerado"` por slug. Side-effect esperado:
+    `test_categorias_tem_pagina_por_categoria` (não é um dos 6 reescritos)
+    falha porque categoria `Ciência de Dados` só o etl declara.
+  - Restore: `git mv docs/specs/ETL-TMP-OUT.md _posts/2026-09-29-etl-dados-prf.md` + `diff` com backup → `restore idêntico`.
+- **Green (aplicação):**
+  - 6 asserções reescritas em `test/site_test.rb` (um Edit por teste):
+    - **AC-9.1** (`test_home_lista_posts_em_ordem_cronologica_decrescente`): extrai `<time data-ts="N">` da home, asserta N ≥ 1 e `timestamps == timestamps.sort.reverse`.
+    - **AC-10.2** (`test_tags_tem_pagina_por_tag_usada`): deriva tags em uso de `search.json`, asserta `tags/<tag>/index.html` para cada; falha com mensagem citando tag faltante e nome do post.
+    - **AC-4.1** (`test_tempo_de_leitura_visivel_no_post`): varre `published_posts` e asserta que ao menos um contém `<em>\d+ min</em>`.
+    - **AC-19.1/19.2/19.3** (`test_post_tecnico_tem_highlight_e_mermaid`): dois `find`s separados (Rouge via `class="highlight"`; Mermaid via `mermaid.min.js` + bloco `language-mermaid`); asserção adicional de `project-repo` para AC-19.3.
+    - **AC-5.1** (`test_imagem_do_post_e_servida_e_referenciada`): universalmente quantificado — para cada `src="/assets/img/posts/..."` em cada post, arquivo existe em `_site/`; vacuamente verdadeiro hoje.
+    - **AC-16.1** (`test_indice_de_busca_lista_os_tres_posts_ficticios`): `JSON.parse(search.json).size == published_posts.size`; nome legado preservado (rename em Deferred do plan).
+  - Adicionado `require "json"` no topo; helper `published_posts` extraído em `SiteTest` (plan Refactor exigia ≥ 3 usos — hoje tem 5).
+  - Tags `# @spec` preservadas 1:1 nos métodos reescritos; `AC-19.3` somada à tag do teste de Mermaid.
+- **Auditoria de impacto formal** (skill `auditoria-de-impacto`):
+  - Veredito inicial: **CORRIGIR ANTES** por buraco real em AC-19 — teste exigia Rouge+Mermaid no mesmo post (perde cobertura de AC-19.1 em cenário sem Mermaid); `language-mermaid` sozinho não prova `mermaid: true` ativo (o Rouge gera essa classe mesmo sem o JS).
+  - Correção aplicada: dois `find`s separados (Rouge e Mermaid independentes); marcador Mermaid trocado de `language-mermaid` para `mermaid.min.js` (prova carregamento gated pelo `_includes/js-selector.html` sombreado — D-4); asserção adicional de `project-repo` para honrar AC-19.3 (que estaria só nominal na tag).
+  - 1 buraco teórico registrado como follow-up (tag com espaço — fora do escopo).
+  - Diff final: `test/site_test.rb` +64/-29 em 1 arquivo; zero efeito irreversível alcançável; zero código de produção tocado.
+- **Phase 2 decomposta** (per tier M — só a próxima fase aberta): 5 sub-itens na Checklist cobrindo Red/Green/Done when/Auditoria para o rename das 2 fixtures.
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -665,6 +739,53 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   referência caso a escolha (b) do Blocker seja adotada
   (`22 runs / 37 assertions / 6 failures / 0 errors` como invariante do
   "diff só de comentários").
+
+### 2026-10-02 — BLOG-2 Fase técnica Phase 1 (D-2)
+
+- **HEAD (working tree):** `750a3d4` + Phase 1 uncommitted (`test/site_test.rb`
+  +64/-29 em 1 arquivo).
+- **Red (baseline + experimento controlado):**
+  - Baseline documenta `22/37/6/0` em `site_test.rb` com 6 falhas por slug
+    morto (bloco "BLOG-2 Fase técnica Baseline" abaixo).
+  - Experimento (post removido temporariamente, rebuild, restaurado):
+    - `docker compose run --rm site bash tools/check.sh` com
+      `_posts/2026-09-29-etl-dados-prf.md` movido fora:
+      - validador: 26/29/0/0 (verde — não depende do post)
+      - htmlproofer: Ran on 10 files! 0 falhas
+      - `site_test.rb`: **22 runs / 45 assertions / 2 failures / 0 errors**
+      - Falhas:
+        1. `SiteTest#test_post_tecnico_tem_highlight_e_mermaid` [test/site_test.rb:173]:
+           `nenhum post publicado contém bloco Mermaid (`language-mermaid`).\nExpected nil to not be nil.`
+           **Mensagem nova da invariante estrutural** — confirmação do Red
+           pelo motivo certo (ausência de propriedade, não de slug).
+        2. `SiteTest#test_categorias_tem_pagina_por_categoria` [test/site_test.rb:125]:
+           `_site/categories/ciência-de-dados/ não foi gerado` — side-effect
+           esperado (teste pré-existente não reescrito; depende da categoria
+           que só o etl declara). **Não é falha de reescrita da Phase 1.**
+    - Restore: `git mv` reverso + `diff <backup> <restaurado>` → saída vazia.
+    - As outras 5 asserções reescritas (AC-9.1, AC-10.2, AC-4.1, AC-5.1,
+      AC-16.1) **passam** mesmo sem o post real, só com as 2 fixtures —
+      prova a robustez das invariantes universais (não dependem de
+      conteúdo específico; só exigem ≥ 1 post publicado).
+- **Green (full gate pós-correção):** `docker compose run --rm site bash tools/check.sh`
+  - validador: **26 runs / 29 assertions / 0 failures / 0 errors / 0 skips** (idem baseline)
+  - htmlproofer: **16 arquivos / 22 links internos / 0 falhas** (`Ran on 16 files!` + `HTML-Proofer finished successfully.`)
+  - `site_test.rb`: **22 runs / 54 assertions / 0 failures / 0 errors / 0 skips**
+    - Delta de contagem vs baseline: `22/37/6/0` → `22/54/0/0` (6 falhas curadas; +17 assertions pelas invariantes extras — 2 em AC-9.1, 2 em AC-10.2, 1 em AC-4.1, 5 em AC-19.1/19.2/19.3, 1 em AC-5.1, 2 em AC-16.1, 4 nas asserções estruturais de posts.size, read, etc.). Invariante do plan `22/≥37/0/0` satisfeita com folga.
+- **Cross-check das tags `# @spec` (invariante do BLOG-3):**
+  - `grep -c "# @spec" test/site_test.rb` → **22** (sem drift)
+  - `grep -c "def test_" test/site_test.rb` → **22** (sem rename)
+  - `grep -c "# @spec" test/validate_front_matter_test.rb` → 26 (não tocado nesta Phase)
+  - `grep -nE "RASCUNHO|analise-exploratoria|api-tarefas-ruby|visualizando-pipelines" test/site_test.rb` → **saída vazia** (slugs mortos exorcizados)
+  - `grep -c "published_posts" test/site_test.rb` → 5 (1 def + 4 usos em métodos distintos; plan exigia ≥ 3)
+- **Análise estática:** `docker compose run --rm site ruby -wc test/site_test.rb` → `Syntax OK`
+- **Diff:** `git diff --stat test/site_test.rb` → `1 file changed, 64 insertions(+), 29 deletions(-)`
+- **Auditoria de impacto formal (skill):** veredito inicial "CORRIGIR ANTES"
+  por 1 buraco real em AC-19 (ver Execution Log acima); correção aplicada;
+  re-rodado em `22/54/0/0`. 1 follow-up fora do escopo registrado (tag com
+  espaço — `## Deviations` 2026-10-02).
+- **Artefato visível:** reescrita só muda testes; nenhum impacto no site
+  publicado (`_site/` idêntico antes e depois).
 
 ### 2026-10-02 — BLOG-2 Fase técnica Baseline
 
