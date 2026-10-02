@@ -362,4 +362,4 @@ def executar_etl_por_ano(conn: sqlite3.Connection, ano: int, file_id: str):
         registrar_log_auditoria(conn, ano=ano, status="erro", mensagem=str(exc))
 ```
 
-Com a base histórica (compreendendo o período de 2017 a 2026) devidamente consolidada no banco de dados, o próximo passo consistirá na análise exploratória para mapear trechos de maior ocorrência de sinistros e identificar os principais fatores associados. Os resultados serão publicados em breve. O código completo do projeto está disponível no [GitHub](https://github.com/ebenezer-dorneles/etl-prf-data).
+Com a base histórica (compreendendo o período de 2017 a 2026) devidamente consolidada no banco de dados, o próximo passo consistirá na análise exploratória para mapear trechos de maior ocorrência de sinistros e identificar os principais fatores associados. Os resultados serão publicados aqui em breve. O código completo do projeto está disponível no [GitHub](https://github.com/ebenezer-dorneles/etl-prf-data).
