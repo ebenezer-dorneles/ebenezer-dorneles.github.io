@@ -8,115 +8,83 @@ step-by-step and spec.md for scope decisions.
 
 ## Checklist
 
-Passada: **BLOG-3** (naming e rastreabilidade — tags `FR-n`/`AC-n.m` em nomes de teste + matriz Coverage no plan).
-Modo de decomposição: **tier M — só a próxima fase aberta**. As demais ficam em nível
-de fase até a anterior fechar. Histórico completo dos Steps 0–5 do BLOG-1 no Execution
-Log abaixo.
+Passada: **BLOG-2 Fase técnica** (D-2, D-3, D-5, D-10 — reescrita de `test/site_test.rb` para invariantes estruturais, rename das fixtures sem `[RASCUNHO]`, Verification externa pré-flip e supersede do Step 6 do BLOG-1).
+Modo de decomposição: **tier M — só a próxima fase aberta**. Fases 2/3/4 ficam em nível
+de fase até Phase 1 fechar. Histórico completo das passadas anteriores (BLOG-1 Steps 0–5 e
+BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
 
-> **BLOG-1 Step 6 (README, remote e primeiro deploy) — desbloqueio parcial em
-> 2026-09-29:** autor trocou Pages → Source para **GitHub Actions** no painel
-> do repositório `ebenezer-dorneles/ebenezer-dorneles.github.io` (D-7 do BLOG-2
-> concluído). Falta o primeiro `git push origin main` (ou merge de `blog-1-mvp`
-> em `main`) para disparar `.github/workflows/pages-deploy.yml` e ativar o
-> environment `github-pages`. Primeiro deploy ainda pendente da decisão de
-> mergear.
+> **BLOG-1 Step 6 — desbloqueio parcial em 2026-09-29:** D-6 (`etl-prf-data` público) e
+> D-7 (Pages Source = GitHub Actions) concluídos pelo autor. Falta o primeiro
+> `git push origin main` (ou merge de `blog-1-mvp` em `main`) para disparar
+> `.github/workflows/pages-deploy.yml` e ativar o environment `github-pages`. **Esse
+> push é precondição operacional da Phase 3 deste plan (D-5 Verification externa)** —
+> continua pendente da decisão do autor, fora do SSD. Subitens do Step 6 permanecem
+> desmarcados até Phase 4 (D-10) aplicar o supersede formal.
 
-- [x] **BLOG-3 Baseline** — contagem exata das duas suites em HEAD `e1cb549` (ver Verification)
-- [x] **BLOG-3 Phase 1 — Tag `test/validate_front_matter_test.rb`** (desbloqueada por Amendment 2026-09-29)
-  - [x] Inserir `# @spec <TAG>` antes de cada `def test_*` (26 tags aplicadas)
-  - [x] Targeted: 26/29/0/0 (idem baseline); `grep tags` = `grep defs` = 26; `ruby -wc` limpo
-- [x] **BLOG-3 Phase 2 — Tag `test/site_test.rb`** (invariante estrita)
-  - [x] Inserir `# @spec <TAG>` antes de cada `def test_*` (22 tags aplicadas)
-  - [x] `tools/check.sh` full: validador `26/29/0/0`, htmlproofer `16 arquivos/0 falhas`, site_test.rb `22/37/6/0` — **mesmas 6 falhas** do baseline (mesmos nomes de teste)
-  - [x] `grep tags` = `grep defs` = 22; `ruby -wc test/site_test.rb` limpo
-- [x] **BLOG-3 Phase 3 — Verificação cruzada Coverage ↔ testes**
-  - [x] `grep -c "# @spec"` total = 48; `grep -c "def test_"` total = 48
-  - [x] Cada AC listado como "testado" na Coverage aparece em ≥ 1 linha `# @spec` (walkthrough manual, todos os ~30 ACs testados batem)
-  - [x] Diff é 100% comentários adicionados (0 `def`/`assert*`/`refute*`/`require`/constante alterada)
-- [ ] Auditoria de impacto formal via skill + commit único de BLOG-3 (aguarda decisão do autor)
+- [x] **BLOG-2 Fase técnica Baseline** — HEAD `750a3d4`, `tools/check.sh` → validador `26/29/0/0`, htmlproofer `16 arquivos/0 falhas`, `site_test.rb` `22/37/6/0` (6 falhas pré-existentes de `686c5c0` confirmadas pelos mesmos nomes de teste). Ver Verification.
+- [ ] **Phase 1 — Reescrever `test/site_test.rb` para invariantes estruturais (D-2)**
+  - [ ] Red: para cada um dos 6 testes falhando no baseline, substituir asserção por slug fictício por invariante estrutural e confirmar que a nova asserção falha pelo motivo certo (não pela mesma mensagem "post não foi gerado" / "não foi gerado" / `nil to not be nil` do baseline)
+  - [ ] Green: aplicar as 6 reescritas conforme Strategy (a–d) e Coverage da Phase 1 — home via `<time datetime>` + ordem decrescente; tags via iteração sobre posts publicados; `search.json.size == publicados.size`; capacidades (Rouge/Mermaid/image) descobertas dinamicamente no primeiro post que as declara
+  - [ ] Refactor: extrair helper `published_posts` em `SiteTest` se ≥ 3 métodos usarem; preservar tags `# @spec` existentes (BLOG-3) sobre os métodos reescritos — se cobertura crescer, somar à tag em vez de substituir
+  - [ ] Done when: `tools/check.sh` → `site_test.rb` `22/≥37/0/0` (todas verdes); `grep -c "# @spec" test/site_test.rb` continua 22; `grep -nE "RASCUNHO|analise-exploratoria|api-tarefas-ruby|visualizando-pipelines" test/site_test.rb` sem saída; `ruby -wc` limpo
+  - [ ] Auditoria de impacto formal via skill (foco: "6 asserções reescritas sem perder cobertura de AC")
+- [ ] **Phase 2 — Renomear fixtures sem `[RASCUNHO]` (D-3)** · pendente até Phase 1 fechar
+- [ ] **Phase 3 — Verification externa pré-flip (D-5)** · pendente até Phase 2 fechar + autor executar `git push origin main`
+- [ ] **Phase 4 — Supersede subitens do Step 6 do BLOG-1 em `task.md` (D-10)** · pendente até Phase 3 fechar
 
 ## State Handover
 
-- **Done nesta sessão (2026-09-29):** Baseline BLOG-3 em HEAD `e1cb549`
-  registrada (validador `26/29/0/0`, htmlproofer `22 links/0 falhas`,
-  site_test `22/37/6/0`). **Amendment 2026-09-29** ao plan.md desbloqueou
-  BLOG-3 (autor escolheu opção (b) — invariante estrita de contagem).
-  **Phases 1, 2 e 3 executadas:** 48 tags `# @spec …` aplicadas (26 em
-  vfm_test.rb + 22 em site_test.rb); diff = 48 insertions puras, 0 linhas
-  de código tocadas. Gates:
-  - Phase 1 targeted `26/29/0/0` (idem baseline)
-  - Phase 2 full `tools/check.sh`: validador `26/29/0/0`, htmlproofer
-    `16 arquivos / 0 falhas`, site_test.rb `22/37/6/0` (**mesmas 6
-    falhas** do baseline, mesmos nomes de teste — invariante estrita do
-    Amendment)
-  - Phase 3 cross-check: `grep tags = grep defs = 48`; todos os ACs
-    testados da Coverage matrix presentes em ≥ 1 linha de tag
-  - `ruby -wc` limpo nos dois arquivos
-- **Também done nesta sessão (2026-09-29):**
-  - Auditoria de impacto formal (`auditoria-de-impacto` skill) executada
-    sobre o diff BLOG-3: veredito PRONTO PARA COMMIT.
-  - Commit único BLOG-3: `76cb996`
-    (`test(blog-portfolio): tag 48 testes com # @spec para rastreabilidade (BLOG-3)`).
-  - Verify pass: `e87db58`
-    (`docs(verify): registra BLOG-3 validado contra spec rev 4`), com
-    `validation.md` completo (43 ACs walkados, 13 UCs mapeados, D-12 e
-    Amendment honrados, 0 CRs). Spec frontmatter `phase: planning →
-    validating`.
-  - **D-7 do BLOG-2 concluído:** autor trocou Pages → Source para
-    GitHub Actions no painel de `ebenezer-dorneles.github.io`.
-    Workflow `.github/workflows/pages-deploy.yml` continua o mesmo do
-    starter; primeiro deploy aguarda apenas push/merge para `main`.
-  - **D-6 do BLOG-2 concluído:** autor tornou público
-    `github.com/ebenezer-dorneles/etl-prf-data`. Link no post PRF
-    (`_posts/2026-09-29-etl-dados-prf.md:8`) agora responde para
-    leitor deslogado — habilita a Verification externa de AC-18.3
-    (D-5 do BLOG-2).
-- **Next:**
-  - `ssd-plan` para abrir `## Plan — BLOG-2 Fase técnica` cobrindo
-    o que resta em `plan.md § Deferred`: **D-2** (reescrita de
-    `site_test.rb` para invariantes estruturais — cura as 6 falhas),
-    **D-3** (renomear títulos das fixtures — desarmar armadilha do
-    flip de `noindex`), **D-5** (Verification externa pré-flip, agora
-    viável com D-6 done), **D-10** (supersede formal do Step 6 antigo
-    do BLOG-1).
-  - Fora do pipeline SSD, decisão do autor: `git push origin main`
-    (ou merge de `blog-1-mvp` em `main`) para disparar o primeiro
-    deploy real e fechar o restante do BLOG-1 Step 6. Site sai com
-    `noindex: true` (correto para o marco atual).
+- **Done nesta sessão (2026-10-02):**
+  - `ssd-plan` escreveu `## Plan — BLOG-2 Fase técnica` em `plan.md`
+    (4 fases cobrindo D-2/D-3/D-5/D-10, Coverage com 13 ACs testados
+    + 7 diferidos explicitamente). Commit `750a3d4`
+    (`docs(plan): abre BLOG-2 Fase técnica (D-2, D-3, D-5, D-10)`).
+    spec.md `phase: validating → planning`.
+  - `ssd-task` decompôs **só a Phase 1** (tier M). Baseline em HEAD
+    `750a3d4` capturada: validador `26/29/0/0`, htmlproofer `16 arquivos
+    / 0 falhas`, `site_test.rb` `22/37/6/0`. As 6 falhas são as mesmas
+    do baseline BLOG-3 (herdadas de `686c5c0`), pelos mesmos nomes de
+    teste. Ver Verification → BLOG-2 Fase técnica Baseline.
+  - spec.md `phase: planning → implementing`.
+- **Next (Phase 1 — D-2):**
+  - Red para cada um dos 6 testes: substituir asserção por slug e rodar
+    `docker compose run --rm site bundle exec ruby -Itest test/site_test.rb`
+    para confirmar a nova mensagem de falha (não a legada).
+  - Green: aplicar reescritas (a) home via `<time datetime>` ordenada;
+    (b) tags via iteração sobre `_site/posts/*/index.html`; (c)
+    `search.json.size == publicados.size`; (d) capacidades (Rouge,
+    Mermaid, image) via primeiro post que declara cada uma.
+  - Refactor: avaliar extração de helper `published_posts`; preservar
+    tags `# @spec` existentes.
+  - Done when gate: `tools/check.sh` → `site_test.rb` `22/≥37/0/0`;
+    `grep -nE "RASCUNHO|analise-exploratoria|api-tarefas-ruby|visualizando-pipelines" test/site_test.rb` sem saída.
+  - Pré-commit: `auditoria-de-impacto` com foco em "regressão de AC".
 - **Blockers / open decisions:**
-  1. **Resolvido** (2026-09-29): Amendment do plan de BLOG-3 adotou opção (b) —
-     invariante estrita de contagem `22/37/6/0` na Fase 2, mesmas 6 asserções
-     falhas pré-existentes antes = depois. BLOG-2 D-2 continua responsável
-     por curar as 6 falhas depois de BLOG-3 fechar.
-  2. **Resolvido** (2026-09-29): autor trocou Pages → Source para
-     **GitHub Actions** no painel do repositório
-     `ebenezer-dorneles/ebenezer-dorneles.github.io` (D-7 do BLOG-2).
-     Restante do Step 6 (primeiro `push origin main` + confirmação da run
-     verde em Actions + smoke do environment `github-pages`) permanece
-     pendente da decisão do autor de mergear `blog-1-mvp` em `main`. **Ver
-     Watch out** sobre gate do workflow (não roda `check.sh`).
-  3. **Resolvido** (2026-09-29): autor tornou público o repositório
-     `github.com/ebenezer-dorneles/etl-prf-data` (D-6 do BLOG-2).
-     Link do post PRF (`_posts/2026-09-29-etl-dados-prf.md:8` e no
-     corpo) agora responde para leitor deslogado — habilita a
-     Verification externa de AC-18.3 (D-5 do BLOG-2).
+  1. **Fase 3 bloqueada** até autor executar `git push origin main` (ou
+     merge de `blog-1-mvp` em `main`). Esta sessão **não** empurra sem
+     confirmação explícita do autor — a Phase 1 e a Phase 2 podem ser
+     feitas inteiras localmente antes do push.
 - **Watch out:**
   - Todo comando Ruby/Jekyll roda **dentro** do container
-    (`docker compose run --rm site …`). O Ruby 4.0.6 do host geraria um lock
+    (`docker compose run --rm site …`); Ruby 4.0.6 do host geraria lock
     com `BUNDLED WITH` 4.x.
-  - Nada foi pushed nesta sessão. Sem risco irreversível alcançado.
-  - `test/site_test.rb` faz `skip` se `_site/` não existir: sempre rodar via
+  - `test/site_test.rb` faz `skip` se `_site/` não existir: rodar via
     `tools/check.sh` (que builda antes), senão a suíte "passa" sem verificar.
-  - Achado antigo do Step 4 sobre `[RASCUNHO]` nas fixtures de
-    `test/fixtures/site_posts/` continua válido; endereçado por BLOG-2 D-3
-    (renomear títulos das fixtures) na Fase técnica do BLOG-2. Hoje inofensivo
-    porque `noindex: true` ainda ativo.
-  - `twitter.username` continua com placeholder do starter — fora do escopo da
-    regra 12 / FR-12, registrar se virar item de fase 2.
-  - O validador **ainda não roda no workflow do Actions** — `check.sh` cobre
-    tudo localmente, mas o job continua com passos inline `Build site`/`Test
-    site` do starter. Item do Step 6 do BLOG-1 (ou de quando o workflow for
-    tocado).
+    Para iteração rápida da Phase 1, pode-se usar `bundle exec ruby -Itest
+    test/site_test.rb` depois de 1 `tools/check.sh` inicial, aproveitando
+    o `_site/` gerado.
+  - Nome do método `test_indice_de_busca_lista_os_tres_posts_ficticios`
+    contradiz a invariante estrutural pós-D-2 (não cita mais "três posts
+    fictícios"). **Rename está fora do escopo da Phase 1** (plan Review
+    & code standards). Fica em Deferred do plan.
+  - Fixtures `test/fixtures/site_posts/*.md` continuam com `[RASCUNHO]`
+    no título até Phase 2 (D-3). Hoje inofensivo (`noindex: true`);
+    `check_draft_guard` só reprova quando `noindex` ≠ true.
+  - Diff da Phase 1 é código real (não comentário como no BLOG-3) —
+    `auditoria-de-impacto` tem material concreto a avaliar.
+  - Push `blog-1-mvp` → `main` continua pendente da decisão do autor.
+    Dois commits locais à frente de `origin/blog-1-mvp`
+    (`94ba825`, `750a3d4`).
 
 ## Deviations
 
@@ -527,6 +495,31 @@ Log abaixo.
   nesta sessão. Handoff a `ssd-plan` para amendment de plan de BLOG-3 ou
   para escrever `## Plan — BLOG-2 Fase técnica` primeiro (ver Blockers).
 
+### 2026-10-02 — BLOG-2 Fase técnica: transição de pass, plan escrito, baseline
+
+- **Gate para ssd-task (BLOG-2 Fase técnica):** `## Plan — BLOG-2 Fase técnica`
+  presente em `plan.md` (commit `750a3d4`); `Spec revision: 4` bate com
+  `spec-revision: 4` do spec; rev 4 aprovada em `## Approvals` (autor,
+  2026-09-29); nenhum CR aberto. Precondição formal satisfeita.
+- **Estado anterior preservado:** BLOG-3 permanece verified (`e87db58`);
+  Steps 0–5 do BLOG-1 fechados; Step 6 do BLOG-1 aguarda push/merge
+  (externo ao SSD) + Phase 4 deste plan (D-10 supersede).
+- **Reset de Checklist e State Handover** para a nova pass (BLOG-2 Fase
+  técnica), mantendo `## Deviations` e `## Execution Log` como append-only.
+  `spec.md` frontmatter atualizado: `phase: validating → planning` (pelo
+  `ssd-plan`) e logo depois `planning → implementing` (por este `ssd-task`,
+  primeira execução da issue).
+- **Decomposição tier M:** só a Phase 1 (D-2) decomposta em sub-itens.
+  Fases 2/3/4 ficam em nível de fase até Phase 1 fechar.
+- **Baseline** rodada com `docker compose run --rm site bash tools/check.sh`
+  em HEAD `750a3d4`. Resultado abaixo em Verification → BLOG-2 Fase técnica
+  Baseline. **Confirmado:** `22/37/6/0` em `site_test.rb` com os 6 nomes
+  esperados pelo plan (sem drift desde o baseline do BLOG-3 em `e1cb549`).
+- **Sem edit de código nesta sessão.** Nenhum arquivo em `test/`, `_posts/`,
+  `_config.yml`, `tools/`, `_layouts/`, `_includes/`, `.github/` ou
+  `_data/` tocado. Handoff aberto para a próxima sessão iniciar o Red da
+  Phase 1.
+
 ## Verification
 
 ### 2026-09-18 — Step 0
@@ -672,6 +665,39 @@ Log abaixo.
   referência caso a escolha (b) do Blocker seja adotada
   (`22 runs / 37 assertions / 6 failures / 0 errors` como invariante do
   "diff só de comentários").
+
+### 2026-10-02 — BLOG-2 Fase técnica Baseline
+
+- **HEAD:** `750a3d4` (`docs(plan): abre BLOG-2 Fase técnica (D-2, D-3, D-5, D-10)`)
+- **Comando:** `docker compose run --rm site bash tools/check.sh`
+- **Validador** (`test/validate_front_matter_test.rb` + CLI):
+  26 runs, 29 assertions, 0 failures, 0 errors, 0 skips (verde)
+- **Build produção + htmlproofer:** 16 arquivos gerados; 0 falhas
+  (`Ran on 16 files!` + `HTML-Proofer finished successfully.`)
+- **`test/site_test.rb`:** 22 runs, 37 assertions, **6 failures**,
+  0 errors, 0 skips. Nomes exatos das 6 falhas (ordem de execução do
+  minitest com `--seed 51654`):
+  1. `test_post_tecnico_tem_highlight_e_mermaid` (site_test.rb:149) —
+     "post não foi gerado"
+  2. `test_imagem_do_post_e_servida_e_referenciada` (site_test.rb:157) —
+     "post não foi gerado"
+  3. `test_indice_de_busca_lista_os_tres_posts_ficticios` (site_test.rb:172) —
+     espera URL `/posts/analise-exploratoria-vendas/` (slug removido em
+     `686c5c0`)
+  4. `test_tags_tem_pagina_por_tag_usada` (site_test.rb:137) —
+     "_site/tags/ruby/ não foi gerado" (tag `ruby` dependia do post
+     `visualizando-pipelines` removido)
+  5. `test_tempo_de_leitura_visivel_no_post` (site_test.rb:143) —
+     "post não foi gerado"
+  6. `test_home_lista_posts_em_ordem_cronologica_decrescente`
+     (site_test.rb:114) — "post ausente da home. Expected nil to not be nil."
+- **Interpretação:** mesma contagem do baseline BLOG-3 (`e1cb549`,
+  `22/37/6/0`) e mesmos 6 nomes de teste; sem drift em 15 commits.
+  Valida a estratégia D-2 do plan: a reescrita das 6 asserções é o
+  único caminho para o verde — nenhuma outra mudança (conteúdo,
+  config, workflow) alteraria esses números.
+- **Done when (Phase 1) espera:** `22/≥37/0/0` (6 reescritas verdes;
+  assertion count pode subir se um teste reescrito fizer mais asserções).
 
 ## Wrap up
 
