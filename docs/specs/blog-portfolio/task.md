@@ -34,46 +34,51 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   - [x] Refactor: nada
   - [x] Done when: grep `[RASCUNHO]` em fixtures → 0; `tools/check.sh` → validador `26/29/0/0`, htmlproofer `16/0`, `site_test.rb` `22/54/0/0` (mesmas contagens da Phase 1); redo da simulação sed throwaway pós-rename → validador passa, única falha é `test_home_tem_meta_robots_noindex` (comportamento esperado pós-flip, AC-18.2 — não é regressão); `_config.yml` revertido
   - [x] Auditoria de impacto formal — veredito "PRONTO PARA PR" (zero consumidores do campo `title` das fixtures em `test/`, `tools/`, `_config.yml`, `_includes/`, `_layouts/`, `_data/`; zero efeito irreversível alcançável)
-- [ ] **Phase 3 — Verification externa pré-flip (D-5)** · precondição operacional satisfeita 2026-10-02 (`origin/main` em `73382e2`); **destravada 2026-10-02 após autor disparar/concluir workflow**; cheques 1–3 verdes; cheques 4 e 5 pendentes
+- [x] **Phase 3 — Verification externa pré-flip (D-5)** · 2026-10-02: pré-checagem + cheques 1–4 verdes empiricamente, cheque 5 satisfeito textualmente (prova empírica deferida como follow-up), cheque adicional AC-18.3 "repo HTTP 200" verde
   - [x] Pré-checagem: `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/` → **200** (2026-10-02, após autor destravar deploy — primeira tentativa 404 por workflow pendente, re-rodada passou). Cache HIT no edge BR-SP; home servindo HTML real do Chirpy com lang pt-BR, post `etl-dados-prf`, links Github/LinkedIn, e meta robots noindex (ver cheque 3).
   - [x] Cheque 1 (AC-17.2): `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/robots.txt` → **200**. Conteúdo: `User-agent: *\n\nDisallow: /norobots/\n\nSitemap: https://ebenezer-dorneles.github.io/sitemap.xml` (robots padrão do Jekyll — AC-17.2 só exige "existe", não restritividade; indexação é inibida pelo meta robots da home — cheque 3).
   - [x] Cheque 2 (AC-17.1): `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/sitemap.xml` → **200**. Sitemap XML bem-formado com URLs do post `etl-dados-prf` (lastmod `2026-09-29T10:00:00-03:00`) e páginas de taxonomia (`/categories/`). O plugin `jekyll-sitemap` não omite URLs com `site.noindex` — o controle de indexação é pelo meta robots.
   - [x] Cheque 3 (AC-18.1): `curl -s https://ebenezer-dorneles.github.io/ | grep -c '<meta name="robots" content="noindex, nofollow">'` → **1** (literal presente no HTML da home, gerado pelo `_includes/metadata-hook.html` quando `site.noindex: true`).
   - [x] Cheque 4 (AC-6.1 + AC-8.1 + `fetch-depth: 0`): typo-fix em `_posts/2026-09-29-etl-dados-prf.md` (commit `ccb5dd8`), merge via PR #2 (padrão do autor; `origin/main` → `f0f0c9c` como merge commit), workflow disparou automaticamente, deploy publicou. **Literal real pt-BR é "Atualizado" (não "Last updated")**: `curl -s https://ebenezer-dorneles.github.io/posts/etl-dados-prf/ | grep -oE 'Atualizado\s*<time[^>]*>[^<]+</time>'` → `Atualizado <time data-ts="1790983055" ...> 02/10/2026 </time>` (count=1); `article:modified_time` = `2026-10-02T20:17:35-03:00` (count=1). Front matter não tem `last_modified_at` explícito → prova direta de que `_plugins/posts-lastmod-hook.rb` executou com git log completo, confirmando `fetch-depth: 0` no CI. AC-6.1 + AC-8.1 provados.
-  - [ ] Cheque 5 (AC-6.2 — `paths-ignore`): edit só em `README.md` (uma linha), commit (`docs(readme): minor copy edit`), push, inspecionar aba Actions e confirmar que nenhum run novo foi disparado (ou via `gh run list -L 2` se `gh` disponível)
+  - [x] Cheque 5 (AC-6.2 — `paths-ignore`): **satisfeito por inspeção textual do workflow** (`grep -nE "paths-ignore|branches:" .github/workflows/pages-deploy.yml` → linhas 7–10 com `paths-ignore: [.gitignore, README.md, LICENSE]`). Prova empírica (push isolado + observação de que `last-modified` não avança) deferida: edit em `README.md` já aplicada e commitada (`e9b5a88`), mas acabou dentro do mesmo PR que o commit do task.md (`0b95c57`, cujo path `docs/specs/...` NÃO está no `paths-ignore`) por decisão operacional do autor em 2026-10-02 para evitar 2 PRs sequenciais. Follow-up registrado em Deviations. Baseline capturado antes do push (`last-modified: Fri, 02 Oct 2026 23:47:12 GMT`, ETag home `"6ac04280-2f6b"`) ficará como reference caso a prova empírica seja reaberta.
   - [x] Cheque adicional (AC-18.3 parte "repo HTTP 200"): `curl -s -o /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/etl-prf-data` → **200** (2026-10-02; habilitado por D-6, concluído 2026-09-29); `https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io` → **200**.
   - [ ] Registrar comando + resultado literal de cada cheque em `## Verification → Phase 3 — Verification externa (D-5)`
-- [ ] **Phase 4 — Supersede subitens do Step 6 do BLOG-1 em `task.md` (D-10)** · pendente até Phase 3 fechar
+- [ ] **Phase 4 — Supersede subitens do Step 6 do BLOG-1 em `task.md` (D-10)**
+  - [ ] Localizar subitens do "Step 6" do BLOG-1 ainda abertos em `task.md` (nota do topo da Checklist, Execution Log e Wrap up linha 985)
+  - [ ] Marcar subitens como `[x]` com nota "superseded by BLOG-2 D-5 (Verification externa, 2026-10-02)", citando commits em `main` (`cd6c18c` PR#1 = Pages ligado; `f0f0c9c` PR#2 = typo-fix + Phase 2) e cheques verdes da Phase 3
+  - [ ] Atualizar a nota do topo da Checklist (BLOG-1 Step 6) para refletir conclusão
+  - [ ] Atualizar Wrap up (linhas 983–988) com estado real: BLOG-1 Step 6 concluído via BLOG-2; Phase 3 cheque 5 textual (follow-up); PR único em `main`
+  - [ ] Gate n/a (edição só de documentação)
+  - [ ] Auditoria de impacto n/a (sem código, sem config, sem efeito irreversível alcançável)
+  - [ ] Commit final: `docs(task): supersede BLOG-1 Step 6 via BLOG-2 Phase 3 (D-10)`
 
 ## State Handover
 
-- **Done nesta sessão (2026-10-02 — Phase 3 iniciada; bloqueada na pré-checagem):**
-  - **Estado do remote**: `origin/main` em `73382e2` (Phase 1 — D-2); `origin/blog-1-mvp` em `bb10890` (Phase 2 — D-3, 1 à frente de main). Precondição operacional do plan ("push ou merge em `main`") satisfeita.
-  - **Pré-checagem Phase 3 — FALHOU (bloqueador)**:
-    - `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/` → **404**
-    - `curl -sI https://ebenezer-dorneles.github.io/` → `HTTP/2 404` com `server: GitHub.com`, `x-github-request-id`, `x-github-edge-region: brazilsouth`, `x-cache: HIT`, `age: 32`, `content-length: 9115` → é a página de 404 clássica do GitHub Pages, servida pelo edge. Site não publicado.
-    - `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/robots.txt` → **404** (coerente — o 404 é do Pages inteiro, não só da home).
-    - `curl -s -o /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io` → **200** (repo acessível, DNS e GitHub OK — o 404 é especificamente do deploy do Pages).
-  - **Cheque adicional (AC-18.3 parte "repo HTTP 200") — PASSOU** (independente de Pages):
-    - `curl -s -o /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/etl-prf-data` → **200**. Checklist atualizada; marcado `[x]`.
-  - **Diagnóstico (`gh` não instalado no host)**: não consigo verificar status dos runs de workflow sem o autor. Possíveis causas do 404: (a) workflow `pages-deploy.yml` não disparou — mas filtro é `branches: [main, master]` e `origin/main` existe; (b) workflow rodou e falhou (precisa olhar Actions); (c) workflow passou mas environment `github-pages` tem config pendente (approvers, URL, etc.).
-- **Next (destravar e retomar Phase 3):**
-  1. **Autor verifica aba Actions**: https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io/actions → confirmar se `pages-deploy.yml` tem run para `main` e qual o estado (sucesso/falha/pendente/não-disparado).
-  2. Se **falhou**: compartilhar o erro; se for infra do Chirpy starter, consertar aqui; se for config do environment, autor age no painel.
-  3. Se **passou mas 404 persiste**: olhar Settings → Pages → confirmar URL ativa e environment `github-pages` liberado para deploy do `main`.
-  4. Se **não disparou**: inspecionar `.github/workflows/pages-deploy.yml` para ver se `on.push.branches` cobre `main` (deve cobrir, veio do starter).
-  5. Quando `curl /` → 200, re-rodar cheques 1–3 (robots.txt / sitemap.xml / meta robots), depois cheques 4 e 5 (que exigem edits + push adicional).
+- **Done nesta sessão (2026-10-02 — Phase 3 fechada; Phase 4 decomposta):**
+  - **Pré-checagem destravada**: 1ª tentativa 404 (workflow pendente); autor acionou/mergeou; 2ª tentativa 200.
+  - **Cheques 1–3 verdes empiricamente**: robots.txt 200 (conteúdo padrão Jekyll), sitemap.xml 200 (XML bem-formado com post + taxonomias), meta robots noindex count=1 na home.
+  - **Cheque 4 verde empiricamente**: typo-fix em `_posts/2026-09-29-etl-dados-prf.md` (`+aqui` na conclusão, commit `ccb5dd8`); merge via PR#2 (`f0f0c9c Merge pull request #2`); workflow disparou + deploy publicou; "Atualizado 02/10/2026" renderizado (literal pt-BR; `article:modified_time` count=1); prova direta de `fetch-depth: 0` + `_plugins/posts-lastmod-hook.rb` operacional no CI.
+  - **Cheque 5 satisfeito textualmente** (prova empírica deferida): `grep` no `.github/workflows/pages-deploy.yml:7-10` confirma `paths-ignore: [.gitignore, README.md, LICENSE]`; prova empírica (push isolado só README + `last-modified` imóvel) **deferida** por decisão operacional (PR único vs 2 PRs sequenciais). Baseline do deploy pré-PR salvo em Verification (`last-modified: Fri, 02 Oct 2026 23:47:12 GMT`, ETag home `"6ac04280-2f6b"`).
+  - **Cheque adicional AC-18.3 "repo HTTP 200" verde**: `etl-prf-data` 200; repo-site 200.
+  - **Reset+re-commit para ordenar** (não-destrutivo; reflog preserva SHAs antigos): `e1c49a2`/`3325aee` desfeitos via `git reset --soft HEAD~2` + `git reset HEAD` + re-commit → `0b95c57` (task) → `e9b5a88` (README, HEAD isolado).
+  - **2 Deviations locais novas**: literal pt-BR "Atualizado" vs plan "Last updated"; cheque 5 textual + follow-up da prova empírica.
+  - **Phase 4 decomposta** (tier M): 7 sub-itens cobrindo supersede dos subitens do Step 6 do BLOG-1 + atualização do Wrap up + commit final.
+- **Next (Phase 4 — D-10, Supersede subitens):**
+  1. Autor abre PR#3 (`blog-1-mvp` → `main`) com `0b95c57` (task Phase 3) + `e9b5a88` (README) + commit da Phase 4 (próximo).
+  2. Após merge, Phase 4: localizar subitens do Step 6 do BLOG-1 em aberto; marcar como `[x]` superseded by BLOG-2 D-5; atualizar nota do topo da Checklist e Wrap up.
+  3. Commit final: `docs(task): supersede BLOG-1 Step 6 via BLOG-2 Phase 3 (D-10)`.
+  4. Phase 4 é 100% documentação (sem gate, sem auditoria formal).
+  5. Depois: `verify` (fora deste skill) para fechar BLOG-2 Fase técnica.
 - **Blockers / open decisions:**
-  1. **Bloqueador operacional externo (SSD não resolve)**: deploy do Pages não publicou em `73382e2`. Autor precisa verificar Actions / Settings → Pages.
-  2. **Working tree desta sessão**: só `docs/specs/blog-portfolio/task.md` (atualização de Checklist, State Handover e Verification com o bloco preliminar da Phase 3). Nenhum arquivo de código ou config tocado. Sem commit pendente até Phase 3 fechar — ou committed agora como `docs(task): registra pré-checagem da Phase 3 (bloqueada)` para preservar o estado se bloqueador demorar.
+  1. **Working tree atual**: `docs/specs/blog-portfolio/task.md` modificado (fechamento da Phase 3 + decomposição da Phase 4). Será commitado como `0b95c57` após reset+re-commit (o commit `0b95c57` já referencia o estado da task.md pré-Phase 4; vou substituí-lo com um amend ou criar um novo commit em cima).
+  2. **PR único inviabiliza prova empírica do cheque 5** (decisão operacional já aceita; registrada em Deviations).
 - **Watch out:**
   - Todo comando Ruby/Jekyll continua rodando **dentro** do container (`docker compose run --rm site …`); Ruby 4.0.6 do host geraria lock com `BUNDLED WITH` 4.x.
-  - **Phase 3 passo 4 (typo-fix)** [quando destravar]: o edit tem que ser visível no corpo renderizado para o `grep "Last updated"` fechar — editar um parágrafo real, não whitespace ou front matter.
-  - **Phase 3 passo 5 (README.md)** [quando destravar]: a prova de `paths-ignore` depende do commit **só** mexer no `README.md`; usar `git add README.md`, não `git add -A`.
-  - **Phase 3 passo 4 precisa que o commit do edit chegue em `main`**: hoje `origin/main` está em `73382e2` (sem `bb10890`). Se o autor decidir que a Phase 3 corre em cima de `73382e2`, o typo-fix sobe direto a `main` depois de passar pelo gate local; se decidir que Phase 2 (`bb10890`) tem que entrar antes, precisa de push/merge adicional antes do cheque 4 (recomendado: subir Phase 2 primeiro para o main ficar coerente com o repo real).
+  - **Follow-up registrado**: prova empírica do cheque 5 pode ser reaberta em sessão futura se qualquer edit em README surgir isoladamente — baseline do deploy pré-push em Verification.
   - **Follow-up registrado como Deviation local da Phase 1 (não bloqueante)**: `test_tags_tem_pagina_por_tag_usada` quebraria com tag com espaço — fora do escopo do BLOG-2 Fase técnica.
   - Nome do método `test_indice_de_busca_lista_os_tres_posts_ficticios` continua contradizendo a invariante estrutural pós-D-2. Rename segue em Deferred do plan.
-  - **PR vs. commit direto**: autor pode preferir fluxo PR (GitHub web) para merges em `main`. Mudança operacional não bloqueante.
+  - **PR padrão confirmado**: autor usa fluxo PR via web (PR#1, PR#2 já). Deviation local atualizada; "Review & code standards" do plan fica para revisão futura do spec.
+  - **Após Phase 4 fechar**: `verify` (validation contra o spec). `spec.md status:` → `implemented` é ownership da skill `verify`, não desta.
 
 ## Deviations
 
@@ -213,6 +218,24 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   executou com git log completo — AC-8.1 e `fetch-depth: 0` provados
   pelo motivo certo). Intent do plan preservada; só muda o literal
   esperado para a locale real do site.
+  · class: local
+  · action: continued
+- 2026-10-02 — Cheque 5 (AC-6.2 — `paths-ignore`): prova empírica
+  (push isolado só do README + observação de que `last-modified` do
+  deploy não avança) **deferida**. Motivo: ordenamento acidental dos
+  commits locais (task.md commitado em cima do README) exigiria reset
+  + 2 PRs sequenciais; autor optou em 2026-10-02 por PR único (3
+  commits: `fe0ef64`→`ccb5dd8` já em main, novos `0b95c57`+`e9b5a88`
+  juntos) para economia operacional. Como o PR único inclui task.md
+  (cujo path NÃO está em `paths-ignore`), o workflow dispara mesmo
+  com o commit do README no mesmo PR, inviabilizando a prova empírica.
+  Cheque 5 fica **satisfeito textualmente** por `grep -nE
+  "paths-ignore|branches:" .github/workflows/pages-deploy.yml` →
+  linhas 7–10 listam `README.md` + 2 outros; o comportamento do
+  `on.push.paths-ignore` do GitHub Actions é documentado. Baseline
+  do deploy anterior salvo em Verification para re-abertura futura
+  da prova empírica se necessário (ex.: numa edição real de README
+  pós-flip quando qualquer edit em `docs/` for coincidente).
   · class: local
   · action: continued
 
@@ -863,10 +886,10 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   (`22 runs / 37 assertions / 6 failures / 0 errors` como invariante do
   "diff só de comentários").
 
-### 2026-10-02 — BLOG-2 Fase técnica Phase 3 (D-5) — cheques 1–3 verdes, 4 e 5 pendentes
+### 2026-10-02 — BLOG-2 Fase técnica Phase 3 (D-5) — concluída
 
-- **HEAD remoto:** `origin/main` → `73382e2` (Phase 1); `origin/blog-1-mvp` → `bb10890` (Phase 2, 1 à frente de main).
-- **HEAD local:** `blog-1-mvp` → `bb10890`.
+- **HEAD remoto:** `origin/main` → `f0f0c9c` (merge PR#2); `origin/blog-1-mvp` → aguardando push de `e9b5a88` (branch local).
+- **HEAD local:** `blog-1-mvp` → `e9b5a88` (3 commits à frente de `origin/blog-1-mvp` após reset+re-commit).
 - **Pré-checagem (destravada):**
   - 1ª tentativa (16:05 BRT): `curl -s -o /dev/null -w '%{http_code}\n' https://ebenezer-dorneles.github.io/` → **404** (workflow pendente/não disparado). Autor acionou o workflow manualmente.
   - 2ª tentativa (pós-ack do autor "disparou"): mesmo comando → **200**.
@@ -880,15 +903,40 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   - `curl -s https://ebenezer-dorneles.github.io/ | grep -c '<meta name="robots" content="noindex, nofollow">'` → **1**
   - Trecho literal confirmado no `<head>` da home: `<meta name="robots" content="noindex, nofollow">` (gerado por `_includes/metadata-hook.html` sob `{% if site.noindex %}`).
   - Inspeção adicional: home também tem `<html lang="pt-BR">`, link para `/posts/etl-dados-prf/`, `<time data-ts="1790686800" ...>` (confirma a invariante de AC-9.1 do site_test), botões GitHub/LinkedIn com URLs corretas.
+- **Cheque 4 (AC-6.1 + AC-8.1 + `fetch-depth: 0`) — PASSOU ✓:**
+  - Edit real aplicada: `_posts/2026-09-29-etl-dados-prf.md` linha 365, `+aqui` na conclusão (commit `ccb5dd8`).
+  - Gate local pré-push: `tools/check.sh` → validador `26/29/0/0`, htmlproofer `16/22/0`, `site_test.rb` `22/54/0/0` (mesmas contagens das Phases 1 e 2 — edit transparente ao gate).
+  - Merge via PR#2 (`f0f0c9c Merge pull request #2 from ebenezer-dorneles/blog-1-mvp`); workflow disparou automaticamente; deploy publicou.
+  - `curl -s https://ebenezer-dorneles.github.io/posts/etl-dados-prf/ | grep -oE 'Atualizado\s*<time[^>]*>[^<]+</time>'` → `Atualizado <time data-ts="1790983055" data-df="DD/MM/YYYY" ...> 02/10/2026 </time>` (count=1).
+  - `curl -s https://ebenezer-dorneles.github.io/posts/etl-dados-prf/ | grep -c 'article:modified_time'` → **1** (meta tag OG `article:modified_time` = `2026-10-02T20:17:35-03:00`).
+  - Timestamp "Atualizado" (`data-ts="1790983055"` = 02/10/2026 23:17 UTC) distinto do "Postado em" (`data-ts="1790686800"` = 29/09/2026 13:00 UTC).
+  - Front matter do post **não** declara `last_modified_at` explícito → prova direta de que `_plugins/posts-lastmod-hook.rb` executou com git log completo no CI, confirmando `fetch-depth: 0` no `pages-deploy.yml` (linha 33).
+  - **Deviation local**: label pt-BR "Atualizado" (não "Last updated" do plan — Chirpy traduz via `_data/locales/pt-BR.yml`).
+- **Cheque 5 (AC-6.2 — `paths-ignore`) — SATISFEITO TEXTUALMENTE (prova empírica deferida):**
+  - Inspeção textual do workflow: `grep -nE "paths-ignore|branches:" .github/workflows/pages-deploy.yml` → linhas 4–10 com `on.push.branches: [main, master]` e `paths-ignore: [.gitignore, README.md, LICENSE]`.
+  - Baseline capturado antes do PR#3 (para re-abertura futura):
+    - `last-modified: Fri, 02 Oct 2026 23:47:12 GMT` (home + post `etl-dados-prf`)
+    - ETag home `"6ac04280-2f6b"`, ETag post `"6ac04280-fb33"`
+    - `cache-control: max-age=600`, `age: 0`
+  - Edit em `README.md` aplicada (`+Fork customizado para blog de portfólio pt-BR...`) e commitada isoladamente (`e9b5a88`), mas o PR único (3 commits: `fe0ef64`+`ccb5dd8` já em main, novos `0b95c57`+`e9b5a88`) foi preferido para economia operacional — isso inviabilizou a prova empírica porque `0b95c57` (task.md) toca `docs/`, path não listado em `paths-ignore`.
+  - **Prova textual aceita**: comportamento de `on.push.paths-ignore` do GitHub Actions é documentado; o workflow literal lista `README.md`.
 - **Cheque adicional (AC-18.3 parte "repo HTTP 200") — PASSOU ✓:**
   - `curl -s -o /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/etl-prf-data` → **200** (habilitado por D-6, 2026-09-29).
   - `curl -s -o /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io` → **200**.
-- **Cheques 4 e 5 — PENDENTES:**
-  - Cheque 4 (typo-fix): requer edit + commit + push + aguardar deploy + `grep "Last updated"` na página renderizada. Push é ação externa que exige autorização.
-  - Cheque 5 (`paths-ignore`): requer edit só em `README.md` + commit + push + inspeção da aba Actions. Push é ação externa que exige autorização.
-- **Análise estática:** n/a (nenhum código tocado nesta parcial).
-- **Diff desta sessão parcial:** só `docs/specs/blog-portfolio/task.md` (Checklist + State Handover + este bloco de Verification).
-- **Auditoria de impacto:** n/a (nenhum código ou config de produção tocado; só documentação de estado).
+- **Pré-requisito confirmado por grep (não é cheque, mas prova apoia o 4):** `.github/workflows/pages-deploy.yml` linha 33: `fetch-depth: 0` (actions/checkout@v4).
+- **Reset+re-commit (correção de ordenamento):**
+  - `git reflog` pré-reset preservado: `e1c49a2` (task em cima) → `3325aee` (README) → `ccb5dd8` → … (commits antigos ficam acessíveis).
+  - `git reset --soft HEAD~2` + `git reset HEAD` (unstage) + re-commit em ordem invertida gerou `0b95c57` (task) → `e9b5a88` (README como HEAD, isolado). Preserva conteúdo e mensagens; só muda SHA.
+- **Análise estática:** n/a (nenhum `.rb`/`.sh` tocado).
+- **Diff desta sessão (3 commits em `blog-1-mvp`, não-pushados):**
+  - `ccb5dd8 fix(content): esclarece onde serão publicados os resultados no post etl-prf` — 1 arquivo, +1/-1 (`_posts/2026-09-29-etl-dados-prf.md`). [já em `origin/main` via PR#2]
+  - `fe0ef64 docs(task): registra cheques 1-3 da Phase 3 do BLOG-2` — 1 arquivo, +57/-29 (`docs/specs/blog-portfolio/task.md`). [já em `origin/main` via PR#2]
+  - `0b95c57 docs(task): registra cheque 4 verde + Deviations da Phase 3` — 1 arquivo, +27/-1 (`docs/specs/blog-portfolio/task.md`). [novo]
+  - `e9b5a88 docs(readme): registra customização pt-BR do fork` — 1 arquivo, +2/-0 (`README.md`). [novo]
+- **Auditoria de impacto:**
+  - Cheque 4 (typo-fix): efeito irreversível alcançável = push em `main` dispara deploy (comportamento esperado — é o ponto da prova). Zero código executável tocado. Reversibilidade trivial (1 commit a reverter). Diff isolado em 1 linha de texto.
+  - Cheque 5 (README): README está em `exclude:` do `_config.yml` (linha 231), não vai para `_site/`. Zero impacto no site publicado. Zero código executável tocado.
+- **Artefato visível:** página do post renderizada em https://ebenezer-dorneles.github.io/posts/etl-dados-prf/ mostra o typo-fix "publicados aqui em breve" + metadata "Atualizado 02/10/2026" + bloco project-repo com link do etl-prf-data.
 
 ### 2026-10-02 — BLOG-2 Fase técnica Phase 2 (D-3)
 
