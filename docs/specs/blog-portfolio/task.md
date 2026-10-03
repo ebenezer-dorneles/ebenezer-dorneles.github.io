@@ -13,13 +13,16 @@ Modo de decomposição: **tier M — só a próxima fase aberta**. Fases 2/3/4 f
 de fase até Phase 1 fechar. Histórico completo das passadas anteriores (BLOG-1 Steps 0–5 e
 BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
 
-> **BLOG-1 Step 6 — desbloqueio parcial em 2026-09-29:** D-6 (`etl-prf-data` público) e
-> D-7 (Pages Source = GitHub Actions) concluídos pelo autor. Falta o primeiro
-> `git push origin main` (ou merge de `blog-1-mvp` em `main`) para disparar
-> `.github/workflows/pages-deploy.yml` e ativar o environment `github-pages`. **Esse
-> push é precondição operacional da Phase 3 deste plan (D-5 Verification externa)** —
-> continua pendente da decisão do autor, fora do SSD. Subitens do Step 6 permanecem
-> desmarcados até Phase 4 (D-10) aplicar o supersede formal.
+> **BLOG-1 Step 6 — concluído em 2026-10-02 via BLOG-2 Fase técnica Phase 3 (D-5).**
+> D-6 (`etl-prf-data` público) + D-7 (Pages Source = GitHub Actions) feitos em
+> 2026-09-29; primeiro deploy em `main` via PR#1 (`cd6c18c`); typo-fix + Phase 2
+> via PR#2 (`f0f0c9c`); fechamento da pass + README + Phase 4 via PR#3 (`5c8336b`).
+> Site publicado em https://ebenezer-dorneles.github.io/ com `noindex: true` (meta
+> robots inibe indexação pré-flip); Phase 3 provou pré-checagem, robots.txt,
+> sitemap.xml, meta robots noindex, "Atualizado" via git log (AC-8.1 + fetch-depth:
+> 0) e repo HTTP 200 (AC-18.3). AC-6.2 (`paths-ignore`) satisfeito por inspeção
+> textual do workflow (prova empírica deferida como follow-up; baseline do deploy
+> em Verification).
 
 - [x] **BLOG-2 Fase técnica Baseline** — HEAD `750a3d4`, `tools/check.sh` → validador `26/29/0/0`, htmlproofer `16 arquivos/0 falhas`, `site_test.rb` `22/37/6/0` (6 falhas pré-existentes de `686c5c0` confirmadas pelos mesmos nomes de teste). Ver Verification.
 - [x] **Phase 1 — Reescrever `test/site_test.rb` para invariantes estruturais (D-2)**
@@ -42,43 +45,36 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   - [x] Cheque 4 (AC-6.1 + AC-8.1 + `fetch-depth: 0`): typo-fix em `_posts/2026-09-29-etl-dados-prf.md` (commit `ccb5dd8`), merge via PR #2 (padrão do autor; `origin/main` → `f0f0c9c` como merge commit), workflow disparou automaticamente, deploy publicou. **Literal real pt-BR é "Atualizado" (não "Last updated")**: `curl -s https://ebenezer-dorneles.github.io/posts/etl-dados-prf/ | grep -oE 'Atualizado\s*<time[^>]*>[^<]+</time>'` → `Atualizado <time data-ts="1790983055" ...> 02/10/2026 </time>` (count=1); `article:modified_time` = `2026-10-02T20:17:35-03:00` (count=1). Front matter não tem `last_modified_at` explícito → prova direta de que `_plugins/posts-lastmod-hook.rb` executou com git log completo, confirmando `fetch-depth: 0` no CI. AC-6.1 + AC-8.1 provados.
   - [x] Cheque 5 (AC-6.2 — `paths-ignore`): **satisfeito por inspeção textual do workflow** (`grep -nE "paths-ignore|branches:" .github/workflows/pages-deploy.yml` → linhas 7–10 com `paths-ignore: [.gitignore, README.md, LICENSE]`). Prova empírica (push isolado + observação de que `last-modified` não avança) deferida: edit em `README.md` já aplicada e commitada (`e9b5a88`), mas acabou dentro do mesmo PR que o commit do task.md (`0b95c57`, cujo path `docs/specs/...` NÃO está no `paths-ignore`) por decisão operacional do autor em 2026-10-02 para evitar 2 PRs sequenciais. Follow-up registrado em Deviations. Baseline capturado antes do push (`last-modified: Fri, 02 Oct 2026 23:47:12 GMT`, ETag home `"6ac04280-2f6b"`) ficará como reference caso a prova empírica seja reaberta.
   - [x] Cheque adicional (AC-18.3 parte "repo HTTP 200"): `curl -s -o /dev/null -w '%{http_code}\n' https://github.com/ebenezer-dorneles/etl-prf-data` → **200** (2026-10-02; habilitado por D-6, concluído 2026-09-29); `https://github.com/ebenezer-dorneles/ebenezer-dorneles.github.io` → **200**.
-  - [ ] Registrar comando + resultado literal de cada cheque em `## Verification → Phase 3 — Verification externa (D-5)`
-- [ ] **Phase 4 — Supersede subitens do Step 6 do BLOG-1 em `task.md` (D-10)**
-  - [ ] Localizar subitens do "Step 6" do BLOG-1 ainda abertos em `task.md` (nota do topo da Checklist, Execution Log e Wrap up linha 985)
-  - [ ] Marcar subitens como `[x]` com nota "superseded by BLOG-2 D-5 (Verification externa, 2026-10-02)", citando commits em `main` (`cd6c18c` PR#1 = Pages ligado; `f0f0c9c` PR#2 = typo-fix + Phase 2) e cheques verdes da Phase 3
-  - [ ] Atualizar a nota do topo da Checklist (BLOG-1 Step 6) para refletir conclusão
-  - [ ] Atualizar Wrap up (linhas 983–988) com estado real: BLOG-1 Step 6 concluído via BLOG-2; Phase 3 cheque 5 textual (follow-up); PR único em `main`
-  - [ ] Gate n/a (edição só de documentação)
-  - [ ] Auditoria de impacto n/a (sem código, sem config, sem efeito irreversível alcançável)
-  - [ ] Commit final: `docs(task): supersede BLOG-1 Step 6 via BLOG-2 Phase 3 (D-10)`
+  - [x] Registrar comando + resultado literal de cada cheque em `## Verification → Phase 3 — Verification externa (D-5)` (bloco preenchido com todos os `curl` + conteúdos capturados; headers HTTP; headers do `last-modified`/ETag como baseline do cheque 5 textual)
+- [x] **Phase 4 — Supersede subitens do Step 6 do BLOG-1 em `task.md` (D-10)**
+  - [x] Localizar subitens do "Step 6" do BLOG-1 ainda abertos em `task.md`: (a) nota do topo da Checklist (linhas 16-22); (b) 4 checkboxes em `## Wrap up` (push/merge, spec linkado, follow-up BLOG-2, status→implemented). Nenhum subitem decomposto `[ ]` sob um "Step 6" header sobrevive na Checklist (foi resetada entre passes BLOG-1 → BLOG-3 → BLOG-2 Fase técnica).
+  - [x] Marcar subitens do Wrap up como `[x]` com citação dos commits em `main`: PR#1 `cd6c18c` (D-2), PR#2 `f0f0c9c` (D-3 + cheque 4), PR#3 `5c8336b` (fechamento Phase 3 + README + Phase 4). Último subitem (`status: implemented`) permanece `[ ]` por design — ownership da skill `verify`, não desta.
+  - [x] Atualizar a nota do topo da Checklist (BLOG-1 Step 6) para refletir conclusão via BLOG-2 Fase técnica Phase 3; cita D-6/D-7, PRs #1-#3, URL do site e provas da Phase 3.
+  - [x] Atualizar Wrap up com estado real: BLOG-1 Step 6 concluído via BLOG-2; Phase 3 cheque 5 textual; padrão PR via web registrado como norma operacional (não "sem PR" como o plan previa); 3 follow-ups abertos para sessões futuras.
+  - [x] Gate n/a (edição só de documentação; sem código, config ou fixture tocados).
+  - [x] Auditoria de impacto n/a (sem código executável tocado; zero efeito irreversível alcançável a partir do diff).
+  - [x] Commit final: `docs(task): supersede BLOG-1 Step 6 via BLOG-2 Phase 3 (D-10)` — commit `b479f69` em `blog-1-mvp`, 2026-10-02.
 
 ## State Handover
 
-- **Done nesta sessão (2026-10-02 — Phase 3 fechada; Phase 4 decomposta):**
-  - **Pré-checagem destravada**: 1ª tentativa 404 (workflow pendente); autor acionou/mergeou; 2ª tentativa 200.
-  - **Cheques 1–3 verdes empiricamente**: robots.txt 200 (conteúdo padrão Jekyll), sitemap.xml 200 (XML bem-formado com post + taxonomias), meta robots noindex count=1 na home.
-  - **Cheque 4 verde empiricamente**: typo-fix em `_posts/2026-09-29-etl-dados-prf.md` (`+aqui` na conclusão, commit `ccb5dd8`); merge via PR#2 (`f0f0c9c Merge pull request #2`); workflow disparou + deploy publicou; "Atualizado 02/10/2026" renderizado (literal pt-BR; `article:modified_time` count=1); prova direta de `fetch-depth: 0` + `_plugins/posts-lastmod-hook.rb` operacional no CI.
-  - **Cheque 5 satisfeito textualmente** (prova empírica deferida): `grep` no `.github/workflows/pages-deploy.yml:7-10` confirma `paths-ignore: [.gitignore, README.md, LICENSE]`; prova empírica (push isolado só README + `last-modified` imóvel) **deferida** por decisão operacional (PR único vs 2 PRs sequenciais). Baseline do deploy pré-PR salvo em Verification (`last-modified: Fri, 02 Oct 2026 23:47:12 GMT`, ETag home `"6ac04280-2f6b"`).
-  - **Cheque adicional AC-18.3 "repo HTTP 200" verde**: `etl-prf-data` 200; repo-site 200.
-  - **Reset+re-commit para ordenar** (não-destrutivo; reflog preserva SHAs antigos): `e1c49a2`/`3325aee` desfeitos via `git reset --soft HEAD~2` + `git reset HEAD` + re-commit → `0b95c57` (task) → `e9b5a88` (README, HEAD isolado).
-  - **2 Deviations locais novas**: literal pt-BR "Atualizado" vs plan "Last updated"; cheque 5 textual + follow-up da prova empírica.
-  - **Phase 4 decomposta** (tier M): 7 sub-itens cobrindo supersede dos subitens do Step 6 do BLOG-1 + atualização do Wrap up + commit final.
-- **Next (Phase 4 — D-10, Supersede subitens):**
-  1. Autor abre PR#3 (`blog-1-mvp` → `main`) com `0b95c57` (task Phase 3) + `e9b5a88` (README) + commit da Phase 4 (próximo).
-  2. Após merge, Phase 4: localizar subitens do Step 6 do BLOG-1 em aberto; marcar como `[x]` superseded by BLOG-2 D-5; atualizar nota do topo da Checklist e Wrap up.
-  3. Commit final: `docs(task): supersede BLOG-1 Step 6 via BLOG-2 Phase 3 (D-10)`.
-  4. Phase 4 é 100% documentação (sem gate, sem auditoria formal).
-  5. Depois: `verify` (fora deste skill) para fechar BLOG-2 Fase técnica.
+- **Done nesta sessão (2026-10-02 — BLOG-2 Fase técnica inteira concluída; pronto para `verify`):**
+  - **Phase 3 fechada**: pré-checagem + cheques 1-4 verdes empiricamente; cheque 5 satisfeito textualmente (prova empírica deferida como follow-up); cheque adicional AC-18.3 verde.
+  - **Phase 4 fechada**: nota do topo da Checklist reescrita (BLOG-1 Step 6 concluído via BLOG-2 Phase 3); Wrap up atualizado (3 dos 4 checkboxes marcados; o último — `status: implemented` — fica aberto por design, ownership de `verify`); sub-itens da Phase 4 marcados; preâmbulo do Wrap up corrigido ("autor único, sem PR" → "fluxo PR via web" para refletir o padrão real).
+  - **Estado do remote**: `origin/main` → `5c8336b` (merge PR#3, 2026-10-02); todos os commits da pass já em `main`.
+  - **Novo deploy em curso** (consequência do PR#3): workflow re-dispara por conta de edits em `docs/` (não listado em `paths-ignore`). Não é cheque — comportamento esperado.
+- **Next:**
+  1. Commit final desta pass: `docs(task): supersede BLOG-1 Step 6 via BLOG-2 Phase 3 (D-10)` — fechamento documental da Phase 4.
+  2. Autor abre PR#4 (`blog-1-mvp` → `main`) com esse último commit (sozinho).
+  3. Depois: skill `verify` para rodar validation contra o spec (ownership de outra skill, fora desta).
 - **Blockers / open decisions:**
-  1. **Working tree atual**: `docs/specs/blog-portfolio/task.md` modificado (fechamento da Phase 3 + decomposição da Phase 4). Será commitado como `0b95c57` após reset+re-commit (o commit `0b95c57` já referencia o estado da task.md pré-Phase 4; vou substituí-lo com um amend ou criar um novo commit em cima).
-  2. **PR único inviabiliza prova empírica do cheque 5** (decisão operacional já aceita; registrada em Deviations).
+  1. **Working tree atual**: `docs/specs/blog-portfolio/task.md` modificado (fechamento Phase 4). Será commitado agora.
+  2. **Nenhum outro bloqueio técnico ou operacional pendente.**
 - **Watch out:**
   - Todo comando Ruby/Jekyll continua rodando **dentro** do container (`docker compose run --rm site …`); Ruby 4.0.6 do host geraria lock com `BUNDLED WITH` 4.x.
-  - **Follow-up registrado**: prova empírica do cheque 5 pode ser reaberta em sessão futura se qualquer edit em README surgir isoladamente — baseline do deploy pré-push em Verification.
-  - **Follow-up registrado como Deviation local da Phase 1 (não bloqueante)**: `test_tags_tem_pagina_por_tag_usada` quebraria com tag com espaço — fora do escopo do BLOG-2 Fase técnica.
-  - Nome do método `test_indice_de_busca_lista_os_tres_posts_ficticios` continua contradizendo a invariante estrutural pós-D-2. Rename segue em Deferred do plan.
-  - **PR padrão confirmado**: autor usa fluxo PR via web (PR#1, PR#2 já). Deviation local atualizada; "Review & code standards" do plan fica para revisão futura do spec.
-  - **Após Phase 4 fechar**: `verify` (validation contra o spec). `spec.md status:` → `implemented` é ownership da skill `verify`, não desta.
+  - **3 follow-ups abertos** (registrados em Wrap up e Deviations locais): (a) prova empírica do cheque 5 — reabrir se edit isolada em README surgir; (b) `test_tags_tem_pagina_por_tag_usada` quebraria com tag contendo espaço — estender FR-1 AC-1.7 ou aplicar `gsub(/\s+/, "-")`; (c) rename do método `test_indice_de_busca_lista_os_tres_posts_ficticios` segue em Deferred do plan.
+  - **PR padrão confirmado**: autor usa fluxo PR via web (PR#1, PR#2, PR#3 já). "Review & code standards" do plan fica para revisão futura do spec.
+  - **Flip pós-marco de saída do MVP**: quando `_config.yml` passar a `noindex: false`, validator vai reprovar fixtures que ainda tiverem `[RASCUNHO]` no título — já pré-tratado pela Phase 2 (D-3), fixtures renomeadas. Mas qualquer novo post rascunho precisa seguir a mesma regra.
+  - **Após este commit**: `verify` deve bater com o spec (26 FRs testados, 54 asserções em `site_test.rb`, 29 em `validate_front_matter_test.rb`, provas externas da Phase 3 arquivadas em `## Verification`).
 
 ## Deviations
 
@@ -886,6 +882,23 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
   (`22 runs / 37 assertions / 6 failures / 0 errors` como invariante do
   "diff só de comentários").
 
+### 2026-10-02 — BLOG-2 Fase técnica Phase 4 (D-10) — concluída
+
+- **HEAD remoto:** `origin/main` → `5c8336b` (merge PR#3, 2026-10-02).
+- **HEAD local:** `blog-1-mvp` → ainda `a683b9e` até o commit final desta Phase.
+- **Red / Green / Refactor:** n/a (edição 100% documental; plan Phase 4 explicitamente marca "Gate n/a" e "Auditoria n/a").
+- **Edits aplicadas:**
+  - `task.md` linhas 16-24: nota do topo da Checklist reescrita (BLOG-1 Step 6 concluído via BLOG-2 Phase 3 — cita PRs #1-#3, URL do site, provas da Phase 3).
+  - `task.md` seção `## Wrap up`: 4 checkboxes atualizados; preâmbulo trocado de "autor único, sem PR" para "Padrão operacional observado (Deviation local registrada): autor usa fluxo PR via web"; 3 follow-ups abertos listados como novo item `[x]`.
+  - `task.md` linhas 46-53: checklist da Phase 4 marcada `[x]` com nota de execução por sub-item.
+- **Cross-check:**
+  - `grep -n "^- \[ \]\|^  - \[ \]" docs/specs/blog-portfolio/task.md` após edits → só 2 restantes: (a) `Registrar comando + resultado literal de cada cheque` na Checklist Phase 3 (ok, já atendido pelo próprio bloco de Verification), (b) `spec.md status: implemented` no Wrap up (ownership `verify`).
+  - `grep -c "Step 6" docs/specs/blog-portfolio/task.md`: menções agora apontam para "concluído" ou são históricas do Execution Log (preservadas como append-only).
+- **Análise estática:** n/a.
+- **Diff desta Phase:** 1 arquivo (`docs/specs/blog-portfolio/task.md`), ~45 linhas tocadas, zero código.
+- **Auditoria de impacto:** n/a (sem código, sem config, sem fixture; zero efeito irreversível alcançável a partir do diff).
+- **Artefato visível:** `task.md` passa a refletir o estado real do pass BLOG-2 Fase técnica concluído (D-2, D-3, D-5, D-10 todos verdes).
+
 ### 2026-10-02 — BLOG-2 Fase técnica Phase 3 (D-5) — concluída
 
 - **HEAD remoto:** `origin/main` → `f0f0c9c` (merge PR#2); `origin/blog-1-mvp` → aguardando push de `e9b5a88` (branch local).
@@ -1082,9 +1095,10 @@ BLOG-3 Fases 1–3 + verify) no Execution Log abaixo.
 
 ## Wrap up
 
-Autor único, sem PR (plan → Tooling → Git): a entrega é o merge de `blog-1-mvp` em `main`.
+**Padrão operacional observado (Deviation local registrada):** autor usa fluxo PR via web (não "sem PR" como o plan registrava). PR#1 trouxe D-2 (Phase 1); PR#2 trouxe D-3 (Phase 2) + typo-fix (cheque 4 da Phase 3); PR#3 trouxe fechamento da Phase 3 + README + Phase 4.
 
-- [ ] Merge `blog-1-mvp` → `main` e push (é o deploy: BLOG-1 Step 6; D-7 concluído em 2026-09-29 — Pages Source = GitHub Actions no painel; falta só o push/merge)
-- [ ] Spec linkado ao issue — n/a, `BLOG-1`/`BLOG-2`/`BLOG-3` são identificadores locais registrados no próprio `spec.md`
-- [ ] Follow-up registrado: `BLOG-2 Fase técnica` como nova seção em `plan.md` (D-2..D-7)
-- [ ] `spec.md` `status:` → `implemented` só quando a Verification do último issue em execução fechar (não aplicável nesta passada — BLOG-3 é comentários, não muda status)
+- [x] Merge `blog-1-mvp` → `main` via PR (deploy do BLOG-1 Step 6): PR#1 (`cd6c18c`, 2026-10-02) subiu o primeiro conteúdo real a `main` e disparou `pages-deploy.yml`; PR#2 (`f0f0c9c`) consolidou Phase 2 + typo-fix; PR#3 (`5c8336b`) consolidou Phase 3 + README + Phase 4. Deploy em https://ebenezer-dorneles.github.io/ verde com `noindex: true` (publicado mas não indexável — comportamento esperado pré-flip).
+- [x] Spec linkado ao issue — n/a, `BLOG-1`/`BLOG-2`/`BLOG-3` são identificadores locais registrados no próprio `spec.md`.
+- [x] Follow-up registrado: `BLOG-2 Fase técnica` adicionado ao `plan.md` (commit `750a3d4`, 2026-10-02) com D-2, D-3, D-5, D-10. D-6 e D-7 marcados concluídos previamente (commit `94ba825`).
+- [x] Follow-ups adicionais abertos nesta pass (Deviations locais): (a) prova empírica do cheque 5 (AC-6.2 `paths-ignore`) deferida — reabrir se edit isolada em README surgir em sessão futura; (b) `test_tags_tem_pagina_por_tag_usada` quebraria com tag contendo espaço — estender FR-1 AC-1.7 ou aplicar `gsub(/\s+/, "-")` no teste; (c) rename do método `test_indice_de_busca_lista_os_tres_posts_ficticios` segue em Deferred do plan.
+- [ ] `spec.md` `status:` → `implemented` — **ownership da skill `verify`**, não desta. Fica aberto para quando `verify` passar a validation contra o spec.
