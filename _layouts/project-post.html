@@ -9,4 +9,5 @@ layout: post
     <a href="{{ page.repo }}">{{ page.repo }}</a>
   </span>
 </div>
-{{ content }}
+{%- include lang.html -%}
+{%- include refactor-content.html content=content lang=lang -%}
