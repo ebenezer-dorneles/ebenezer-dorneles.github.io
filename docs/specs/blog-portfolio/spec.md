@@ -1,7 +1,7 @@
 ---
 issues: [BLOG-1, BLOG-2, BLOG-3]
 status: in-progress
-phase: implementing
+phase: validating
 spec-revision: 4
 tier: M
 ---
