@@ -6,7 +6,7 @@ order: 4
 
 Construir software resiliente e compreender dados são as duas frentes que orientam o meu trabalho.
 
-Como engenheiro de software, atuo no ciclo completo de desenvolvimento de aplicações distribuídas e serviços de alta disponibilidade: desde otimização profunda de bases de dados relacionais e fluxos assíncronos em larga escala até à orquestração de microsserviços em produção.
+Como desenvolvedor de software, atuo no ciclo completo de desenvolvimento de aplicações distribuídas e serviços de alta disponibilidade: desde otimização profunda de bases de dados relacionais e fluxos assíncronos em larga escala até à orquestração de microsserviços em produção.
 
 A minha formação em Matemática impulsiona a minha curiosidade analítica. Utilizo Python e R para modelagem quantitativa, análise exploratória e simulações estatísticas. Aqui no blog partilho artigos técnicos, notas de projetos e discussões que ligam boas práticas de desenvolvimento backend ao universo dos dados.
 
