@@ -197,25 +197,16 @@ Você é um revisor de conformidade técnica e QA.
 
 Em minha rotina eu adotei meus próprios templates baseados em SDD, e eles têm me ajudado muito a manter o controle do escopo, do contexto e das tarefas. Isso também me dá maior clareza sobre como o projeto está se desenvolvendo. Estou usando há algum tempo e gostei muito de como ele funcionou para mim, sem a necessidade de ficar trocando centenas de prompts com a IA. Além disso, toda a metodologia de decisão fica registrada e versionada no repositório.
 
-```md
-
+```
 .workspace/docs/
-
 └── specs/
-
-└── <specification_name>
-
-├── explore/ # Documentos iniciais para entender o escopo
-
-│ └── <feature>.md # Documentos de exploração do projeto
-
-├── spec.md # Documento de especificação do projeto
-
-├── plan.md # Planejamento do projeto
-
-├── task_plan.md # Tarefas geradas pela IA a partir da especificação
-
-└── validate.md # Validação do projeto
+    └── <specification_name>/
+        ├── explore/              # Documentos iniciais para entender o escopo
+        │   └── <feature>.md      # Documentos de exploração do projeto
+        ├── spec.md               # Documento de especificação do projeto
+        ├── plan.md               # Planejamento do projeto
+        ├── task_plan.md          # Tarefas geradas pela IA a partir da especificação
+        └── validate.md           # Validação do projeto
 ```
 
 Isso é útil para ter um registro histórico do projeto e garantir que a IA esteja alinhada com o que esperamos. Também permite que qualquer pessoa da equipe entenda o contexto do projeto sem precisar ler centenas de mensagens de chat ou analisar linhas de código. Todas as etapas seguem o mesmo padrão de saída, o que facilita o entendimento do fluxo de trabalho.
