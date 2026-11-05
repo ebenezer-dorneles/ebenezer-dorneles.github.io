@@ -3,6 +3,7 @@ title: "O prompt perfeito não existe: o que aprendi documentando specs antes da
 date: 2026-09-29 10:00:00 -0300
 categories: [Desenvolvimento]
 tags: [ia, sdd, especificação, produtividade]
+description: "Depois de perder uma manhã revisando código de IA que não era o que eu precisava, adotei o Spec-Driven Development: entenda as 5 etapas e os desafios de especificar antes de codar."
 mermaid: true
 ---
 

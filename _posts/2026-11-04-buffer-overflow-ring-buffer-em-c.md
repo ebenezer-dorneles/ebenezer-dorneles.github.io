@@ -1,5 +1,5 @@
 ---
-title: "O Que É Buffer e Por Que Ele Evita que Seu Sistema Trave?"
+title: "O que é buffer e por que ele evita que seu sistema trave?"
 description: "Entenda o que é um Buffer na memória RAM, como evitar Buffer Overflow em C com Bounds Checking e como funciona o Ring Buffer."
 date: 2026-11-04 19:44:40 -0300
 categories: [Desenvolvimento]
