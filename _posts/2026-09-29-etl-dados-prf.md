@@ -6,6 +6,7 @@ tags: [python, etl, dados, sqlite]
 project: true
 layout: project-post
 repo: https://github.com/ebenezer-dorneles/etl-prf-data
+description: "Como automatizar com Python a coleta dos dados abertos de acidentes da PRF: scraping dos links, download dos zips, transformação e carga em um banco SQLite."
 mermaid: true
 ---
 
